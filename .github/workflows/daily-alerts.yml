@@ -27,9 +27,10 @@ jobs:
 
 
 
-          JSONBIN_BIN_ID: ${{ secrets.6a934ca4da38895dfe213a58 }}
-          JSONBIN_MASTER_KEY: ${{ secrets.$2a$10$0CtgW0GNw2Sd00UCBDtzDOj/q0wznPfaz8FpZWFXypZyLO.y/XSay }}
-          RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
-          ALERT_EMAIL_TO: ${{ secrets.ALERT_EMAIL_TO }}
-          ALERT_EMAIL_FROM: ${{ secrets.ALERT_EMAIL_FROM }}
+          env:
+  JSONBIN_BIN_ID: ${{ secrets.JSONBIN_BIN_ID }}
+  JSONBIN_MASTER_KEY: ${{ secrets.JSONBIN_MASTER_KEY }}
+  RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
+  ALERT_EMAIL_TO: ${{ secrets.ALERT_EMAIL_TO }}
+  ALERT_EMAIL_FROM: ${{ secrets.ALERT_EMAIL_FROM }}
         run: node scripts/send-alerts.js
