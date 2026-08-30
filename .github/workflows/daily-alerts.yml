@@ -24,13 +24,9 @@ jobs:
 
       - name: Bildiriş skriptini işə sal
         env:
-
-
-
-          env:
-  JSONBIN_BIN_ID: ${{ secrets.JSONBIN_BIN_ID }}
-  JSONBIN_MASTER_KEY: ${{ secrets.JSONBIN_MASTER_KEY }}
-  RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
-  ALERT_EMAIL_TO: ${{ secrets.ALERT_EMAIL_TO }}
-  ALERT_EMAIL_FROM: ${{ secrets.ALERT_EMAIL_FROM }}
+          JSONBIN_BIN_ID: ${{ secrets.JSONBIN_BIN_ID }}
+          JSONBIN_MASTER_KEY: ${{ secrets.JSONBIN_MASTER_KEY }}
+          RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
+          ALERT_EMAIL_TO: ${{ secrets.ALERT_EMAIL_TO }}
+          ALERT_EMAIL_FROM: ${{ secrets.ALERT_EMAIL_FROM }}
         run: node scripts/send-alerts.js
