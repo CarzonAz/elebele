@@ -1,9 +1,13 @@
 /**
  * send-alerts.js
  * ------------------------------------------------------------
- * JSONBin.io-dakı avtomobil datasını oxuyur, tətbiqdəki
- * "Poti & Etibarnamə Nəzarəti" məntiqi ilə eyni qaydada
- * xəbərdarlıqları hesablayır və varsa, HTML e-poçt göndərir.
+ * JSONBin.io-dakı avtomobil datasını oxuyur, index.html-dəki
+ * "Poti & Etibarnamə Nəzarəti" panelinin eyni tarix/status
+ * hesablama məntiqi ilə YALNIZ bu 2 şərtdən birinə uyğun
+ * avtomobilləri süzgəcdən keçirir:
+ *   1) Artıq Poti-yə çatmış avtomobillər (gün sayı <= 0)
+ *   2) Yaxın 15-20 gün ərzində Poti-yə çatması gözlənilən avtomobillər
+ * Uyğun avtomobil yoxdursa, mail ümumiyyətlə göndərilmir.
  *
  * Bu skript Node.js 18+ ilə işləyir (built-in fetch istifadə edir),
  * əlavə npm paketi tələb olunmur.
@@ -83,101 +87,72 @@ async function fetchCarsFromCloud() {
 }
 
 /* ------------------------------ Analiz məntiqi ---------------------------- */
+/* index.html-dəki "Poti & Etibarnamə Nəzarəti" panelinin eyni məntiqi:
+   - c.poti tarixi olmalıdır
+   - c.status "Bakıdadır" olmamalıdır (artıq Bakıya çatıbsa, bildirişə ehtiyac yoxdur)
+   - Ya artıq Poti-yə çatıb (days <= 0), ya da 15-20 gün ərzində çatacaq (0 < days <= 20) */
 
-function analyzeAlerts(cars) {
-    // Yalnız hələ Bakıya çatmamış və Poti tarixi olan avtomobillər nəzərdən keçirilir
+function getPotiAlerts(cars) {
     const potiCars = cars.filter(c => c.poti && c.status !== 'Bakıdadır');
 
-    const soonArriving = potiCars
-        .filter(c => {
-            const days = getDaysToPoti(c.poti);
-            return days !== null && days <= SOON_DAYS_THRESHOLD;
-        })
-        .sort((a, b) => getDaysToPoti(a.poti) - getDaysToPoti(b.poti));
+    const alerts = potiCars
+        .map(c => ({ car: c, days: getDaysToPoti(c.poti) }))
+        .filter(({ days }) => days !== null && days <= SOON_DAYS_THRESHOLD);
 
-    const noEtibarname = potiCars.filter(c => !c.etibarname);
-    const noShippingPaid = potiCars.filter(c => !c.shippingPaid);
-
-    return { soonArriving, noEtibarname, noShippingPaid };
+    alerts.sort((a, b) => a.days - b.days);
+    return alerts;
 }
 
 /* ------------------------------- HTML şablonu ------------------------------ */
 
 function carLabel(c) {
     const parts = [c.brand, c.model].filter(Boolean).join(' ');
-    return parts || (c.vin ? `VIN: ${c.vin}` : 'Naməlum avtomobil');
+    return parts || 'Naməlum avtomobil';
 }
 
-function renderCarRow(c, extraInfo) {
+function daysLabel(days) {
+    if (days < 0) return `${Math.abs(days)} gün öncə Poti-yə çatıb`;
+    if (days === 0) return 'Bu gün Poti-yə çatır';
+    return `${days} gün sonra Poti-yə çatacaq`;
+}
+
+function renderCarRow({ car, days }) {
+    const urgency = days <= 0 ? '#dc2626' : (days <= 7 ? '#d97706' : '#4f46e5');
     return `
         <tr>
-            <td style="padding:10px 14px;border-bottom:1px solid #e2e8f0;font-weight:600;color:#0f172a;">${carLabel(c)}</td>
-            <td style="padding:10px 14px;border-bottom:1px solid #e2e8f0;color:#475569;">${c.poti || '-'}</td>
-            <td style="padding:10px 14px;border-bottom:1px solid #e2e8f0;color:#475569;">${c.status || '-'}</td>
-            <td style="padding:10px 14px;border-bottom:1px solid #e2e8f0;color:#475569;">${extraInfo}</td>
+            <td style="padding:10px 14px;border-bottom:1px solid #e2e8f0;font-weight:600;color:#0f172a;">${carLabel(car)}</td>
+            <td style="padding:10px 14px;border-bottom:1px solid #e2e8f0;color:#475569;font-family:monospace;">${car.vin || '-'}</td>
+            <td style="padding:10px 14px;border-bottom:1px solid #e2e8f0;color:#475569;">${car.poti || '-'}</td>
+            <td style="padding:10px 14px;border-bottom:1px solid #e2e8f0;color:${urgency};font-weight:700;">${daysLabel(days)}</td>
         </tr>`;
 }
 
-function renderSection(title, colorHex, icon, cars, extraInfoFn) {
-    if (cars.length === 0) return '';
-    const rows = cars.map(c => renderCarRow(c, extraInfoFn(c))).join('');
-    return `
-    <div style="margin-bottom:28px;">
-        <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;">
-            <span style="font-size:15px;font-weight:800;color:${colorHex};">${icon} ${title} (${cars.length})</span>
-        </div>
-        <table style="width:100%;border-collapse:collapse;border:1px solid #e2e8f0;border-radius:8px;overflow:hidden;font-size:13px;">
-            <thead>
-                <tr style="background:#f1f5f9;">
-                    <th style="text-align:left;padding:10px 14px;color:#64748b;font-size:11px;text-transform:uppercase;">Avtomobil</th>
-                    <th style="text-align:left;padding:10px 14px;color:#64748b;font-size:11px;text-transform:uppercase;">Poti Tarixi</th>
-                    <th style="text-align:left;padding:10px 14px;color:#64748b;font-size:11px;text-transform:uppercase;">Status</th>
-                    <th style="text-align:left;padding:10px 14px;color:#64748b;font-size:11px;text-transform:uppercase;">Qeyd</th>
-                </tr>
-            </thead>
-            <tbody>${rows}</tbody>
-        </table>
-    </div>`;
-}
-
-function buildEmailHtml({ soonArriving, noEtibarname, noShippingPaid }) {
+function buildEmailHtml(alerts) {
     const todayStr = new Date().toLocaleDateString('az-AZ', { day: '2-digit', month: '2-digit', year: 'numeric' });
-
-    const soonSection = renderSection(
-        'Portа Çatmaq Üzrə Olan Avtomobillər', '#4f46e5', '🚢',
-        soonArriving,
-        c => {
-            const d = getDaysToPoti(c.poti);
-            if (d === null) return '-';
-            if (d < 0) return `${Math.abs(d)} gün gecikib`;
-            if (d === 0) return 'Bu gün çatır';
-            return `${d} gün qalıb`;
-        }
-    );
-
-    const etibarnameSection = renderSection(
-        'Etibarnaməsi Hazır Olmayan Avtomobillər', '#d97706', '📜',
-        noEtibarname,
-        () => 'Etibarnamə gözlənilir'
-    );
-
-    const shippingSection = renderSection(
-        'Yol Pulu Ödənilməmiş Avtomobillər', '#dc2626', '💵',
-        noShippingPaid,
-        () => 'Yol pulu ödənilməyib'
-    );
+    const rows = alerts.map(renderCarRow).join('');
 
     return `
     <div style="font-family:Arial,Helvetica,sans-serif;background:#f1f5f9;padding:24px;">
         <div style="max-width:680px;margin:0 auto;background:#ffffff;border-radius:16px;overflow:hidden;border:1px solid #e2e8f0;">
             <div style="background:#dc2626;padding:20px 28px;">
-                <span style="color:#ffffff;font-size:18px;font-weight:800;">🚗 CARZON — Günlük Xəbərdarlıq Hesabatı</span>
+                <span style="color:#ffffff;font-size:18px;font-weight:800;">🚢 CARZON — Poti Bildiriş Hesabatı</span>
                 <div style="color:#fecaca;font-size:12px;margin-top:4px;">${todayStr}</div>
             </div>
             <div style="padding:24px 28px;">
-                ${soonSection}
-                ${etibarnameSection}
-                ${shippingSection}
+                <div style="margin-bottom:16px;">
+                    <span style="font-size:15px;font-weight:800;color:#4f46e5;">🚢 Poti-yə Çatmış / Çatmaq Üzrə Olan Avtomobillər (${alerts.length})</span>
+                </div>
+                <table style="width:100%;border-collapse:collapse;border:1px solid #e2e8f0;border-radius:8px;overflow:hidden;font-size:13px;">
+                    <thead>
+                        <tr style="background:#f1f5f9;">
+                            <th style="text-align:left;padding:10px 14px;color:#64748b;font-size:11px;text-transform:uppercase;">Avtomobil</th>
+                            <th style="text-align:left;padding:10px 14px;color:#64748b;font-size:11px;text-transform:uppercase;">VIN</th>
+                            <th style="text-align:left;padding:10px 14px;color:#64748b;font-size:11px;text-transform:uppercase;">Poti Tarixi</th>
+                            <th style="text-align:left;padding:10px 14px;color:#64748b;font-size:11px;text-transform:uppercase;">Vəziyyət</th>
+                        </tr>
+                    </thead>
+                    <tbody>${rows}</tbody>
+                </table>
                 <p style="color:#94a3b8;font-size:11px;margin-top:20px;border-top:1px solid #e2e8f0;padding-top:14px;">
                     Bu bildiriş avtomatik olaraq GitHub Actions vasitəsilə göndərilib. Tam siyahını görmək üçün tətbiqə daxil olun.
                 </p>
@@ -219,18 +194,16 @@ async function main() {
     const cars = await fetchCarsFromCloud();
     console.log(`${cars.length} avtomobil oxundu.`);
 
-    const alerts = analyzeAlerts(cars);
-    const totalAlerts = alerts.soonArriving.length + alerts.noEtibarname.length + alerts.noShippingPaid.length;
+    const alerts = getPotiAlerts(cars);
+    console.log(`Poti bildirişi tələb edən avtomobil sayı: ${alerts.length}`);
 
-    console.log(`Tezliklə çatan: ${alerts.soonArriving.length}, Etibarnaməsiz: ${alerts.noEtibarname.length}, Yol pulu ödənilməmiş: ${alerts.noShippingPaid.length}`);
-
-    if (totalAlerts === 0) {
-        console.log('Heç bir aktiv xəbərdarlıq yoxdur — e-poçt göndərilmir.');
+    if (alerts.length === 0) {
+        console.log('Heç bir aktiv Poti bildirişi yoxdur — e-poçt göndərilmir.');
         return;
     }
 
     const html = buildEmailHtml(alerts);
-    const subject = `🚨 Carzone: ${totalAlerts} aktiv xəbərdarlıq (${new Date().toLocaleDateString('az-AZ')})`;
+    const subject = `⚠️ Poti Bildirişi: ${alerts.length} avtomobil diqqət tələb edir`;
 
     console.log('E-poçt göndərilir...');
     await sendEmail(html, subject);
