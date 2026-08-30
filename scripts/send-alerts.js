@@ -2,11 +2,18 @@
  * send-alerts.js
  * ------------------------------------------------------------
  * JSONBin.io-dakı avtomobil datasını oxuyur, index.html-dəki
- * "Poti & Etibarnamə Nəzarəti" panelinin eyni tarix/status
- * hesablama məntiqi ilə YALNIZ bu 2 şərtdən birinə uyğun
- * avtomobilləri süzgəcdən keçirir:
- *   1) Artıq Poti-yə çatmış avtomobillər (gün sayı <= 0)
- *   2) Yaxın 15-20 gün ərzində Poti-yə çatması gözlənilən avtomobillər
+ * "Poti & Etibarnamə Nəzarəti" panelinin EYNİ tarix/status
+ * hesablama məntiqi ilə YALNIZ bu şərtə uyğun avtomobilləri
+ * süzgəcdən keçirir:
+ *   - c.poti tarixi mövcuddur
+ *   - c.status "Bakıdadır" deyil
+ *   - Poti-yə çatmasına <= 20 gün qalıb (artıq çatmışlar da daxil, days <= 0)
+ *
+ * Hər avtomobil üçün mailə əlavə olaraq bu iki statusu göstərir
+ * (dəqiq tətbiqdəki Poti panelindəki kimi):
+ *   - 📜 Etibarnamə statusu (verilib / hazır deyil)
+ *   - 💵 Yol pulu statusu (ödənilib / gözlənilir)
+ *
  * Uyğun avtomobil yoxdursa, mail ümumiyyətlə göndərilmir.
  *
  * Bu skript Node.js 18+ ilə işləyir (built-in fetch istifadə edir),
@@ -35,7 +42,7 @@ requireEnv('JSONBIN_MASTER_KEY', JSONBIN_MASTER_KEY);
 requireEnv('RESEND_API_KEY', RESEND_API_KEY);
 requireEnv('ALERT_EMAIL_TO', ALERT_EMAIL_TO);
 
-/* ---------- Tətbiqdəki tarix köməkçi funksiyalarının eyni məntiqi ---------- */
+/* ---------- Tətbiqdəki (index.html) tarix köməkçi funksiyalarının EYNİ məntiqi ---------- */
 
 function parseAppDate(str) {
     if (!str) return null;
@@ -52,6 +59,15 @@ function parseAppDate(str) {
         return isNaN(dt.getTime()) ? null : dt;
     }
     return null;
+}
+
+function formatDateDMY(str) {
+    const dt = parseAppDate(str);
+    if (!dt) return '-';
+    const dd = String(dt.getDate()).padStart(2, '0');
+    const mm = String(dt.getMonth() + 1).padStart(2, '0');
+    const yyyy = dt.getFullYear();
+    return `${dd}.${mm}.${yyyy}`;
 }
 
 function getDaysToPoti(potiDateStr) {
@@ -87,10 +103,10 @@ async function fetchCarsFromCloud() {
 }
 
 /* ------------------------------ Analiz məntiqi ---------------------------- */
-/* index.html-dəki "Poti & Etibarnamə Nəzarəti" panelinin eyni məntiqi:
+/* index.html-dəki renderPotiTrackingList() funksiyasının EYNİ süzgəc məntiqi (SOON_20 rejimi):
    - c.poti tarixi olmalıdır
    - c.status "Bakıdadır" olmamalıdır (artıq Bakıya çatıbsa, bildirişə ehtiyac yoxdur)
-   - Ya artıq Poti-yə çatıb (days <= 0), ya da 15-20 gün ərzində çatacaq (0 < days <= 20) */
+   - Poti-yə çatmasına <= 20 gün qalıb (artıq çatıb - days mənfi olsa belə daxildir) */
 
 function getPotiAlerts(cars) {
     const potiCars = cars.filter(c => c.poti && c.status !== 'Bakıdadır');
@@ -99,6 +115,7 @@ function getPotiAlerts(cars) {
         .map(c => ({ car: c, days: getDaysToPoti(c.poti) }))
         .filter(({ days }) => days !== null && days <= SOON_DAYS_THRESHOLD);
 
+    // Tətbiqdəki kimi ən yaxın (və ya artıq keçmiş) tarixlər əvvəldə olsun
     alerts.sort((a, b) => a.days - b.days);
     return alerts;
 }
@@ -106,55 +123,95 @@ function getPotiAlerts(cars) {
 /* ------------------------------- HTML şablonu ------------------------------ */
 
 function carLabel(c) {
-    const parts = [c.brand, c.model].filter(Boolean).join(' ');
-    return parts || 'Naməlum avtomobil';
+    return c.model || 'Naməlum avtomobil';
 }
 
-function daysLabel(days) {
-    if (days < 0) return `${Math.abs(days)} gün öncə Poti-yə çatıb`;
-    if (days === 0) return 'Bu gün Poti-yə çatır';
-    return `${days} gün sonra Poti-yə çatacaq`;
+function ownerLabel(c) {
+    return c.owner || '-';
+}
+
+function daysNotice(days) {
+    if (days < 0) return { text: `⚠️ ${Math.abs(days)} gün əvvəl Poti-yə çatıb (Portda/Terminaldadır)`, color: '#7e22ce' };
+    if (days === 0) return { text: '🚨 BU GÜN Poti-yə çatır!', color: '#e11d48' };
+    if (days <= 15) return { text: `⚡ Poti-yə çatmasına cəmi ${days} gün qalıb!`, color: '#b45309' };
+    return { text: `🗓️ Poti-yə çatmasına ${days} gün var`, color: '#334155' };
+}
+
+function docBadge(car) {
+    // index.html-dəki "📜 Etibarnamə Statusu" bloku ilə eyni məntiq
+    if (car.etibarname) {
+        return { text: '✅ Verilib', color: '#047857', bg: '#ecfdf5', border: '#a7f3d0' };
+    }
+    return { text: '⚠️ Hazır Deyil', color: '#be123c', bg: '#fff1f2', border: '#fecdd3' };
+}
+
+function paidBadge(car) {
+    // index.html-dəki "💵 Yol Pulu Statusu" bloku ilə eyni məntiq
+    const amount = car.clientShipping || 0;
+    if (car.shippingPaid) {
+        return { text: `✅ Ödənilib ($${amount})`, color: '#047857', bg: '#ecfdf5', border: '#a7f3d0' };
+    }
+    return { text: `⏳ Gözlənilir ($${amount})`, color: '#92400e', bg: '#fffbeb', border: '#fde68a' };
+}
+
+function badgeHtml(b) {
+    return `<span style="display:inline-block;padding:3px 10px;border-radius:9999px;font-size:11px;font-weight:700;color:${b.color};background:${b.bg};border:1px solid ${b.border};">${b.text}</span>`;
 }
 
 function renderCarRow({ car, days }) {
-    const urgency = days <= 0 ? '#dc2626' : (days <= 7 ? '#d97706' : '#4f46e5');
+    const notice = daysNotice(days);
+    const doc = docBadge(car);
+    const paid = paidBadge(car);
+
     return `
         <tr>
-            <td style="padding:10px 14px;border-bottom:1px solid #e2e8f0;font-weight:600;color:#0f172a;">${carLabel(car)}</td>
-            <td style="padding:10px 14px;border-bottom:1px solid #e2e8f0;color:#475569;font-family:monospace;">${car.vin || '-'}</td>
-            <td style="padding:10px 14px;border-bottom:1px solid #e2e8f0;color:#475569;">${car.poti || '-'}</td>
-            <td style="padding:10px 14px;border-bottom:1px solid #e2e8f0;color:${urgency};font-weight:700;">${daysLabel(days)}</td>
+            <td style="padding:10px 14px;border-bottom:1px solid #e2e8f0;">
+                <div style="font-weight:700;color:#0f172a;">${carLabel(car)}</div>
+                <div style="color:#94a3b8;font-size:11px;margin-top:2px;">👤 ${ownerLabel(car)}</div>
+                <div style="color:#94a3b8;font-size:11px;font-family:monospace;">VIN: ${car.vin || '-'} ${car.container ? `| Konteyner: ${car.container}` : ''}</div>
+            </td>
+            <td style="padding:10px 14px;border-bottom:1px solid #e2e8f0;color:#475569;font-family:monospace;font-weight:700;">${formatDateDMY(car.poti)}</td>
+            <td style="padding:10px 14px;border-bottom:1px solid #e2e8f0;color:${notice.color};font-weight:700;font-size:12px;">${notice.text}</td>
+            <td style="padding:10px 14px;border-bottom:1px solid #e2e8f0;">${badgeHtml(doc)}</td>
+            <td style="padding:10px 14px;border-bottom:1px solid #e2e8f0;">${badgeHtml(paid)}</td>
         </tr>`;
 }
 
 function buildEmailHtml(alerts) {
     const todayStr = new Date().toLocaleDateString('az-AZ', { day: '2-digit', month: '2-digit', year: 'numeric' });
     const rows = alerts.map(renderCarRow).join('');
+    const noDocCount = alerts.filter(a => !a.car.etibarname).length;
+    const notPaidCount = alerts.filter(a => !a.car.shippingPaid).length;
 
     return `
     <div style="font-family:Arial,Helvetica,sans-serif;background:#f1f5f9;padding:24px;">
-        <div style="max-width:680px;margin:0 auto;background:#ffffff;border-radius:16px;overflow:hidden;border:1px solid #e2e8f0;">
-            <div style="background:#dc2626;padding:20px 28px;">
-                <span style="color:#ffffff;font-size:18px;font-weight:800;">🚢 CARZON — Poti Bildiriş Hesabatı</span>
-                <div style="color:#fecaca;font-size:12px;margin-top:4px;">${todayStr}</div>
+        <div style="max-width:760px;margin:0 auto;background:#ffffff;border-radius:16px;overflow:hidden;border:1px solid #e2e8f0;">
+            <div style="background:#0f172a;padding:20px 28px;">
+                <span style="color:#fbbf24;font-size:18px;font-weight:800;">📜 CARZON — Poti & Etibarnamə Nəzarəti Hesabatı</span>
+                <div style="color:#94a3b8;font-size:12px;margin-top:4px;">${todayStr}</div>
             </div>
-            <div style="padding:24px 28px;">
-                <div style="margin-bottom:16px;">
-                    <span style="font-size:15px;font-weight:800;color:#4f46e5;">🚢 Poti-yə Çatmış / Çatmaq Üzrə Olan Avtomobillər (${alerts.length})</span>
-                </div>
+
+            <div style="padding:20px 28px 0 28px;display:flex;gap:10px;flex-wrap:wrap;">
+                <span style="display:inline-block;padding:6px 14px;border-radius:10px;font-size:12px;font-weight:700;color:#92400e;background:#fef3c7;border:1px solid #fde68a;">${alerts.length} Avtomobil (15-20 Gün Qalan / Çatmış)</span>
+                <span style="display:inline-block;padding:6px 14px;border-radius:10px;font-size:12px;font-weight:700;color:#be123c;background:#ffe4e6;border:1px solid #fecdd3;">${noDocCount} Etibarnaməsi Yoxdur</span>
+                <span style="display:inline-block;padding:6px 14px;border-radius:10px;font-size:12px;font-weight:700;color:#92400e;background:#fffbeb;border:1px solid #fde68a;">${notPaidCount} Yol Pulu Gözlənilir</span>
+            </div>
+
+            <div style="padding:20px 28px 24px 28px;">
                 <table style="width:100%;border-collapse:collapse;border:1px solid #e2e8f0;border-radius:8px;overflow:hidden;font-size:13px;">
                     <thead>
                         <tr style="background:#f1f5f9;">
-                            <th style="text-align:left;padding:10px 14px;color:#64748b;font-size:11px;text-transform:uppercase;">Avtomobil</th>
-                            <th style="text-align:left;padding:10px 14px;color:#64748b;font-size:11px;text-transform:uppercase;">VIN</th>
+                            <th style="text-align:left;padding:10px 14px;color:#64748b;font-size:11px;text-transform:uppercase;">Avtomobil / Müştəri</th>
                             <th style="text-align:left;padding:10px 14px;color:#64748b;font-size:11px;text-transform:uppercase;">Poti Tarixi</th>
                             <th style="text-align:left;padding:10px 14px;color:#64748b;font-size:11px;text-transform:uppercase;">Vəziyyət</th>
+                            <th style="text-align:left;padding:10px 14px;color:#64748b;font-size:11px;text-transform:uppercase;">Etibarnamə</th>
+                            <th style="text-align:left;padding:10px 14px;color:#64748b;font-size:11px;text-transform:uppercase;">Yol Pulu</th>
                         </tr>
                     </thead>
                     <tbody>${rows}</tbody>
                 </table>
                 <p style="color:#94a3b8;font-size:11px;margin-top:20px;border-top:1px solid #e2e8f0;padding-top:14px;">
-                    Bu bildiriş avtomatik olaraq GitHub Actions vasitəsilə göndərilib. Tam siyahını görmək üçün tətbiqə daxil olun.
+                    Bu bildiriş avtomatik olaraq GitHub Actions vasitəsilə göndərilib. Tam siyahını görmək üçün tətbiqdəki "Poti & Etibarnamə Nəzarəti" panelinə daxil olun.
                 </p>
             </div>
         </div>
