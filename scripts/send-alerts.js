@@ -27,6 +27,11 @@ const RESEND_API_KEY = process.env.RESEND_API_KEY;
 const ALERT_EMAIL_TO = process.env.ALERT_EMAIL_TO;
 const ALERT_EMAIL_FROM = process.env.ALERT_EMAIL_FROM || 'Carzone Alerts <onboarding@resend.dev>';
 
+// CallMeBot (WhatsApp) - opsional. Əgər bu iki secret təyin olunmayıbsa,
+// skript sadəcə WhatsApp göndərişini keçib yalnız mail göndərəcək.
+const CALLMEBOT_PHONE = process.env.CALLMEBOT_PHONE;   // Sənin WhatsApp nömrən (beynəlxalq formatda, məs: 994501234567)
+const CALLMEBOT_APIKEY = process.env.CALLMEBOT_APIKEY; // CallMeBot-dan aldığın APIKEY
+
 // Poti-yə çatmağa neçə gün qalanda "tezliklə" hesab edilsin (tətbiqdəki SOON_20 ilə eyni)
 const SOON_DAYS_THRESHOLD = 20;
 
@@ -41,6 +46,11 @@ requireEnv('JSONBIN_BIN_ID', JSONBIN_BIN_ID);
 requireEnv('JSONBIN_MASTER_KEY', JSONBIN_MASTER_KEY);
 requireEnv('RESEND_API_KEY', RESEND_API_KEY);
 requireEnv('ALERT_EMAIL_TO', ALERT_EMAIL_TO);
+
+const whatsappEnabled = Boolean(CALLMEBOT_PHONE && CALLMEBOT_APIKEY);
+if (!whatsappEnabled) {
+    console.log('Diqqət: CALLMEBOT_PHONE / CALLMEBOT_APIKEY təyin olunmayıb — WhatsApp bildirişi ötürüləcək.');
+}
 
 /* ---------- Tətbiqdəki (index.html) tarix köməkçi funksiyalarının EYNİ məntiqi ---------- */
 
@@ -218,6 +228,43 @@ function buildEmailHtml(alerts) {
     </div>`;
 }
 
+/* ------------------------------- WhatsApp mətni ---------------------------- */
+/* CallMeBot yalnız düz mətn qəbul edir (HTML yoxdur), ona görə qısa, oxunaqlı
+   siyahı formatında hazırlanır. Eyni Poti panel məntiqi ilə. */
+
+function buildWhatsAppText(alerts) {
+    const todayStr = new Date().toLocaleDateString('az-AZ', { day: '2-digit', month: '2-digit', year: 'numeric' });
+    const noDocCount = alerts.filter(a => !a.car.etibarname).length;
+    const notPaidCount = alerts.filter(a => !a.car.shippingPaid).length;
+
+    const lines = alerts.map(({ car, days }) => {
+        const notice = daysNotice(days).text;
+        const doc = car.etibarname ? '✅ Etibarnamə var' : '⚠️ Etibarnamə yoxdur';
+        const paid = car.shippingPaid ? `✅ Yol pulu ödənilib` : `⏳ Yol pulu gözlənilir ($${car.clientShipping || 0})`;
+        return `🚗 ${carLabel(car)} (👤 ${ownerLabel(car)})\n📅 Poti: ${formatDateDMY(car.poti)} — ${notice}\n${doc} | ${paid}`;
+    });
+
+    return (
+        `📜 *CARZON — Poti & Etibarnamə Nəzarəti*\n` +
+        `${todayStr}\n\n` +
+        `Cəmi: ${alerts.length} avtomobil | Etibarnaməsiz: ${noDocCount} | Yol pulu gözlənilən: ${notPaidCount}\n` +
+        `——————————————\n\n` +
+        lines.join('\n\n')
+    );
+}
+
+async function sendWhatsApp(text) {
+    const url = `https://api.callmebot.com/whatsapp.php?phone=${encodeURIComponent(CALLMEBOT_PHONE)}&text=${encodeURIComponent(text)}&apikey=${encodeURIComponent(CALLMEBOT_APIKEY)}`;
+    const res = await fetch(url, { method: 'GET' });
+    const bodyText = await res.text().catch(() => '');
+
+    if (!res.ok) {
+        throw new Error(`CallMeBot WhatsApp göndərilmədi: ${res.status} ${bodyText}`);
+    }
+
+    return bodyText;
+}
+
 /* --------------------------------- Resend --------------------------------- */
 
 async function sendEmail(html, subject) {
@@ -265,6 +312,18 @@ async function main() {
     console.log('E-poçt göndərilir...');
     await sendEmail(html, subject);
     console.log('E-poçt uğurla göndərildi!');
+
+    if (whatsappEnabled) {
+        try {
+            console.log('WhatsApp bildirişi göndərilir...');
+            const waText = buildWhatsAppText(alerts);
+            await sendWhatsApp(waText);
+            console.log('WhatsApp bildirişi uğurla göndərildi!');
+        } catch (waErr) {
+            // WhatsApp uğursuz olsa belə, mail artıq göndərilib - skript xəta ilə dayanmasın
+            console.error('WhatsApp göndərilmədi (mail buna baxmayaraq göndərilib):', waErr.message);
+        }
+    }
 }
 
 main().catch(err => {
