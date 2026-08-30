@@ -229,28 +229,77 @@ function buildEmailHtml(alerts) {
 }
 
 /* ------------------------------- WhatsApp mətni ---------------------------- */
-/* CallMeBot yalnız düz mətn qəbul edir (HTML yoxdur), ona görə qısa, oxunaqlı
-   siyahı formatında hazırlanır. Eyni Poti panel məntiqi ilə. */
+/* CallMeBot-un mesaj uzunluğu limiti var (uzun mesajlar kəsilir), ona görə:
+   1) Hər avtomobil YIĞCAM tək sətirdə yazılır (əvvəlki 3-sətirli format yerinə)
+   2) Mesaj həddindən uzun olarsa, avtomatik bir neçə hissəyə bölünüb ardıcıl
+      göndərilir - beləcə say çoxalanda da heç nə kəsilmir. */
 
-function buildWhatsAppText(alerts) {
+const WHATSAPP_MAX_CHARS = 1200; // Təhlükəsiz limit (CallMeBot-un praktiki kəsmə həddindən aşağı)
+
+function shortDate(str) {
+    const dt = parseAppDate(str);
+    if (!dt) return '-';
+    const dd = String(dt.getDate()).padStart(2, '0');
+    const mm = String(dt.getMonth() + 1).padStart(2, '0');
+    return `${dd}.${mm}`;
+}
+
+function compactDaysNotice(days) {
+    if (days < 0) return `${Math.abs(days)}g əvvəl çatıb`;
+    if (days === 0) return `BU GÜN çatır`;
+    return `${days}g qalıb`;
+}
+
+function buildCarLine(index, { car, days }) {
+    const doc = car.etibarname ? '✅' : '❌';
+    const paid = car.shippingPaid ? '✅' : '⏳';
+    return `${index}) ${carLabel(car)} (${ownerLabel(car)}) | Poti ${shortDate(car.poti)} - ${compactDaysNotice(days)} | Etib:${doc} Yol:${paid}`;
+}
+
+function buildWhatsAppHeader(alerts, part = null, totalParts = null) {
     const todayStr = new Date().toLocaleDateString('az-AZ', { day: '2-digit', month: '2-digit', year: 'numeric' });
     const noDocCount = alerts.filter(a => !a.car.etibarname).length;
     const notPaidCount = alerts.filter(a => !a.car.shippingPaid).length;
-
-    const lines = alerts.map(({ car, days }) => {
-        const notice = daysNotice(days).text;
-        const doc = car.etibarname ? '✅ Etibarnamə var' : '⚠️ Etibarnamə yoxdur';
-        const paid = car.shippingPaid ? `✅ Yol pulu ödənilib` : `⏳ Yol pulu gözlənilir ($${car.clientShipping || 0})`;
-        return `🚗 ${carLabel(car)} (👤 ${ownerLabel(car)})\n📅 Poti: ${formatDateDMY(car.poti)} — ${notice}\n${doc} | ${paid}`;
-    });
-
+    const partLabel = (part && totalParts && totalParts > 1) ? ` (${part}/${totalParts})` : '';
     return (
-        `📜 *CARZON — Poti & Etibarnamə Nəzarəti*\n` +
-        `${todayStr}\n\n` +
-        `Cəmi: ${alerts.length} avtomobil | Etibarnaməsiz: ${noDocCount} | Yol pulu gözlənilən: ${notPaidCount}\n` +
-        `——————————————\n\n` +
-        lines.join('\n\n')
+        `📜 CARZON Poti Nəzarəti${partLabel} - ${todayStr}\n` +
+        `Cəmi:${alerts.length} Etibarnaməsiz:${noDocCount} YolPulu:${notPaidCount}\n` +
+        `Etib=Etibarnamə, Yol=Yol pulu\n—————`
     );
+}
+
+// alerts-i WHATSAPP_MAX_CHARS həddini aşmayan bir neçə mətn hissəsinə bölür.
+function buildWhatsAppMessages(alerts) {
+    const lines = alerts.map((a, i) => buildCarLine(i + 1, a));
+
+    // Əvvəlcə hamısını tək mesaja yerləşdirməyə cəhd et
+    const singleHeader = buildWhatsAppHeader(alerts);
+    const singleMsg = `${singleHeader}\n${lines.join('\n')}`;
+    if (singleMsg.length <= WHATSAPP_MAX_CHARS) {
+        return [singleMsg];
+    }
+
+    // Sığmırsa, sətirləri hissələrə böl (hər hissə üçün header ayrıca hesablanacaq)
+    const chunks = [];
+    let current = [];
+    let currentLen = 0;
+    const approxHeaderLen = 160; // hissə başlığı üçün ehtiyat yer
+
+    lines.forEach(line => {
+        if (currentLen + line.length + 1 > (WHATSAPP_MAX_CHARS - approxHeaderLen) && current.length > 0) {
+            chunks.push(current);
+            current = [];
+            currentLen = 0;
+        }
+        current.push(line);
+        currentLen += line.length + 1;
+    });
+    if (current.length > 0) chunks.push(current);
+
+    return chunks.map((chunkLines, idx) => {
+        const header = buildWhatsAppHeader(alerts, idx + 1, chunks.length);
+        return `${header}\n${chunkLines.join('\n')}`;
+    });
 }
 
 async function sendWhatsApp(text) {
@@ -264,6 +313,8 @@ async function sendWhatsApp(text) {
 
     return bodyText;
 }
+
+const sleep = (ms) => new Promise(resolve => setTimeout(resolve, ms));
 
 /* --------------------------------- Resend --------------------------------- */
 
@@ -316,8 +367,14 @@ async function main() {
     if (whatsappEnabled) {
         try {
             console.log('WhatsApp bildirişi göndərilir...');
-            const waText = buildWhatsAppText(alerts);
-            await sendWhatsApp(waText);
+            const waMessages = buildWhatsAppMessages(alerts);
+            console.log(`WhatsApp mesajı ${waMessages.length} hissəyə bölündü.`);
+            for (let i = 0; i < waMessages.length; i++) {
+                await sendWhatsApp(waMessages[i]);
+                console.log(`WhatsApp hissəsi ${i + 1}/${waMessages.length} göndərildi.`);
+                // CallMeBot ardıcıl sürətli sorğuları rədd edə bilər - araya kiçik fasilə qoyuruq
+                if (i < waMessages.length - 1) await sleep(3000);
+            }
             console.log('WhatsApp bildirişi uğurla göndərildi!');
         } catch (waErr) {
             // WhatsApp uğursuz olsa belə, mail artıq göndərilib - skript xəta ilə dayanmasın
