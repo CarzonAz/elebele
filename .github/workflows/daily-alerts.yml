@@ -5,6 +5,8 @@ on:
     # Azərbaycan (Bakı) saatı il ilə UTC+4 sabitdir (yay vaxtına keçid yoxdur).
     # 10:00 Bakı vaxtı = 06:00 UTC
     - cron: '0 6 * * *'
+    # 14:00 Bakı vaxtı = 10:00 UTC
+    - cron: '0 10 * * *'
     # 17:00 Bakı vaxtı = 13:00 UTC
     - cron: '0 13 * * *'
   # Manuel test etmək üçün: repo -> Actions -> "Daily Car Alerts Email" -> "Run workflow"
