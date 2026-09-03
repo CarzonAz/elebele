@@ -26,7 +26,6 @@
     pointer-events: none;
   }
 
-  /* FƏNƏR DÜYMƏSİ */
   #torchBtn {
     position: absolute; top: calc(20px + env(safe-area-inset-top)); right: 20px;
     z-index: 10; background: rgba(0,0,0,0.6); border: 1px solid rgba(255,255,255,0.3);
@@ -130,8 +129,8 @@
   let isTorchOn = false;
   let activeCode = "";
   let activeType = "";
+  let isCameraStarted = false;
 
-  // SƏS EFFECTİ YARADAN FUNKSİYA (iOS VƏ ANDROID ÜÇÜN 100% İŞLƏYİR)
   function playSuccessSound() {
     try {
       const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
@@ -139,14 +138,14 @@
       const gain = audioCtx.createGain();
       
       osc.type = 'sine';
-      osc.frequency.setValueAtTime(800, audioCtx.currentTime); // Səs tonu
+      osc.frequency.setValueAtTime(800, audioCtx.currentTime);
       gain.gain.setValueAtTime(0.1, audioCtx.currentTime);
       
       osc.connect(gain);
       gain.connect(audioCtx.destination);
       
       osc.start();
-      osc.stop(audioCtx.currentTime + 0.15); // 0.15 saniyəlik qısa "bip"
+      osc.stop(audioCtx.currentTime + 0.15);
     } catch (e) {
       console.log('Audio icazəsi yoxdur');
     }
@@ -166,20 +165,50 @@
   layoutFrame();
 
   async function startCamera() {
-    const stream = await navigator.mediaDevices.getUserMedia({
-      video: {
-        facingMode: { ideal: 'environment' },
-        width: { ideal: 1920 },
-        height: { ideal: 1080 }
-      },
-      audio: false
-    });
-    video.srcObject = stream;
-    videoTrack = stream.getVideoTracks()[0];
-    await video.play();
+    try {
+      // Köhnə aktiv stream varsa dayandırırıq ki, sıfırdan təmiz qoşulsun
+      if (video.srcObject) {
+        const tracks = video.srcObject.getTracks();
+        tracks.forEach(track => track.stop());
+      }
+
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: {
+          facingMode: { ideal: 'environment' },
+          width: { ideal: 1920 },
+          height: { ideal: 1080 }
+        },
+        audio: false
+      });
+      video.srcObject = stream;
+      videoTrack = stream.getVideoTracks()[0];
+      await video.play();
+      isCameraStarted = true;
+    } catch (err) {
+      console.error("Kamera xətası:", err);
+      statusEl.textContent = '❌ Kamera açıla bilmədi. İcazəni yoxlayın.';
+    }
   }
 
-  // FƏNƏRİ YANDIRIB-SÖNDÜRMƏK
+  // TƏTBİQƏ GERİ QAYIDANDA KAMERANI AVTOMATİK BƏRPA ET
+  async function restoreCameraIfNeeded() {
+    if (isCameraStarted) {
+      if (!video.srcObject || video.paused || video.ended) {
+        await startCamera();
+      } else {
+        video.play().catch(() => {});
+      }
+    }
+  }
+
+  window.addEventListener('focus', restoreCameraIfNeeded);
+  window.addEventListener('pageshow', restoreCameraIfNeeded);
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'visible') {
+      restoreCameraIfNeeded();
+    }
+  });
+
   torchBtn.addEventListener('click', async () => {
     if (!videoTrack) return;
     const capabilities = videoTrack.getCapabilities ? videoTrack.getCapabilities() : {};
@@ -261,7 +290,6 @@
     activeCode = code;
     activeType = type;
 
-    // Kod tapılan kimi səs effekti veririk
     playSuccessSound();
 
     statusEl.textContent = `✅ ${type}: ${code}`;
@@ -325,8 +353,8 @@
     retakeBtn.style.display = 'block';
   });
 
-  retakeBtn.addEventListener('click', () => {
-    video.play();
+  retakeBtn.addEventListener('click', async () => {
+    await restoreCameraIfNeeded();
     statusEl.textContent = '📸 Lot nömrəsi və ya VIN kodu çərçivəyə salın';
     
     scanBtn.style.display = 'flex';
