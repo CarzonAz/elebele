@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-<title>Gemini AI Lot Scanner</title>
+<title>Pro Lot Scanner</title>
 <style>
   * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
   html, body {
@@ -28,19 +28,18 @@
 
   /* Paneli YUXARI qaldırdıq */
   #panel {
-    position: absolute; left: 0; right: 0; bottom: calc(40px + env(safe-area-inset-bottom));
+    position: absolute; left: 0; right: 0; bottom: calc(60px + env(safe-area-inset-bottom));
     padding: 0 20px;
-    display: flex; flex-direction: column; align-items: center; gap: 14px; z-index: 5;
+    display: flex; flex-direction: column; align-items: center; gap: 12px; z-index: 5;
   }
   #status { 
-    font-size: 15px; color: #ffecb3; text-align: center; font-weight: 700; 
-    background: rgba(0,0,0,0.7); padding: 8px 16px; border-radius: 20px;
+    font-size: 14px; color: #ffecb3; text-align: center; font-weight: 700; 
+    background: rgba(0,0,0,0.8); padding: 8px 16px; border-radius: 20px;
   }
 
-  /* ƏSAS ÇÖZÜM: Şəkil çəkmə, Lot Nömrəsi və Bid.cars Axtarış tək düymədə */
   #mainActionBtn {
     width: 100%; max-width: 400px; padding: 18px 15px;
-    font-size: 18px; font-weight: 800; color: #000; background: #ffca28;
+    font-size: 17px; font-weight: 800; color: #000; background: #ffca28;
     border: none; border-radius: 16px; text-decoration: none; text-align: center;
     box-shadow: 0 6px 25px rgba(255,202,40,0.5); cursor: pointer;
     display: flex; justify-content: center; align-items: center; gap: 10px;
@@ -79,24 +78,21 @@
   <div id="panel">
     <div id="status">📸 Çərçivəyə salıb düyməyə basın</div>
     
-    <!-- YALNIZ BİR ƏSAS DÜYMƏ -->
     <button id="mainActionBtn">📸 ŞƏKLİ ÇƏK VƏ ANALİZ ET</button>
     
     <button id="retakeBtn">Yenidən Çək 🔄</button>
   </div>
 
   <div id="startOverlay">
-    <h1>Google Gemini AI Scanner 🧠</h1>
-    <p>Gündəlik 1500 şəkil limitli yüksək dəqiqlikli AI skaner.</p>
+    <h1>Pro Lot Scanner Pro 🧠</h1>
+    <p>Limitsiz, uzaqdan çəkiliş dəstəkli AI skaner.</p>
     <button id="startBtn">Kameranı Aç</button>
   </div>
 </div>
 
+<script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
 <script>
 (function () {
-  // BURAYA PULSUZ GEMINI API AÇARINIZI QOYUN
-  const GEMINI_API_KEY = "YOUR_GEMINI_API_KEY"; 
-
   const video = document.getElementById('video');
   const hiddenCanvas = document.getElementById('hiddenCanvas');
   const targetFrame = document.getElementById('targetFrame');
@@ -107,12 +103,13 @@
   const startBtn = document.getElementById('startBtn');
 
   let currentFoundLot = null;
+  let tesseractWorker = null;
 
   function layoutFrame() {
     const w = window.innerWidth, h = window.innerHeight;
     const frameW = Math.min(w * 0.90, 560);
     const frameH = frameW * 0.48;
-    const left = (w - frameW) / 2, top = (h - frameH) / 2 - 80; // Çərçivəni də biraz yuxarı çəkdik
+    const left = (w - frameW) / 2, top = (h - frameH) / 2 - 70;
     targetFrame.style.width = frameW + 'px';
     targetFrame.style.height = frameH + 'px';
     targetFrame.style.left = left + 'px';
@@ -125,8 +122,8 @@
     const stream = await navigator.mediaDevices.getUserMedia({
       video: {
         facingMode: { ideal: 'environment' },
-        width: { ideal: 1920 },
-        height: { ideal: 1080 }
+        width: { ideal: 3840, min: 1920 },
+        height: { ideal: 2160, min: 1080 }
       },
       audio: false
     });
@@ -134,7 +131,17 @@
     await video.play();
   }
 
-  function captureFrameBase64() {
+  async function initLocalAI() {
+    statusEl.textContent = '🧠 AI Motoru yüklənir...';
+    tesseractWorker = await Tesseract.createWorker('eng');
+    await tesseractWorker.setParameters({
+      tessedit_char_whitelist: '0123456789',
+      tessedit_pageseg_mode: Tesseract.PSM.AUTO,
+    });
+  }
+
+  // UZAQDAN ÇƏKİLƏN ŞƏKLİ BÖYÜDÜB RƏQƏMLƏRİ KƏSKİNLƏŞDİRMƏ
+  function processFrameForZoom() {
     const vw = video.videoWidth, vh = video.videoHeight;
     const iw = window.innerWidth, ih = window.innerHeight;
 
@@ -146,79 +153,64 @@
     const frameW = rect.width / scale;
     const frameH = rect.height / scale;
 
-    hiddenCanvas.width = frameW;
-    hiddenCanvas.height = frameH;
+    // Şəkli 2 dəfə rəqəmsal olaraq böyüdürük (Uzaqdan çəkəndə rəqəmlər iriləşsin)
+    const zoomFactor = 2; 
+    hiddenCanvas.width = frameW * zoomFactor;
+    hiddenCanvas.height = frameH * zoomFactor;
     const ctx = hiddenCanvas.getContext('2d');
-    ctx.drawImage(video, frameX, frameY, frameW, frameH, 0, 0, frameW, frameH);
-    
-    // Base64 prefiksini təmizləyirik
-    return hiddenCanvas.toDataURL('image/jpeg', 0.85).split(',')[1];
-  }
 
-  // GOOGLE GEMINI 1.5 FLASH PULSUZ AI ANALİZİ
-  async function askGeminiAI(base64Data) {
-    statusEl.textContent = '🧠 Google AI şəklə baxır...';
-    
-    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${GEMINI_API_KEY}`;
-    
-    const promptText = "Find the 8-digit car lot number in this image. Return ONLY the 8 digits. If there is a letter like X at the end, ignore it and return ONLY 8 numbers. If not found, return NONE.";
+    ctx.drawImage(video, frameX, frameY, frameW, frameH, 0, 0, hiddenCanvas.width, hiddenCanvas.height);
 
-    const bodyData = {
-      contents: [{
-        parts: [
-          { text: promptText },
-          { inline_data: { mime_type: "image/jpeg", data: base64Data } }
-        ]
-      }]
-    };
-
-    try {
-      const response = await fetch(url, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(bodyData)
-      });
-
-      const data = await response.json();
-      
-      if (data.candidates && data.candidates[0].content.parts[0].text) {
-        const aiResponse = data.candidates[0].content.parts[0].text.trim();
-        const digits = aiResponse.replace(/\D/g, '');
-        return digits.length === 8 ? digits : null;
-      }
-    } catch (e) {
-      console.error(e);
+    // B/W Kontrast filtri (Kölgələri silir)
+    const imgData = ctx.getImageData(0, 0, hiddenCanvas.width, hiddenCanvas.height);
+    const d = imgData.data;
+    for (let i = 0; i < d.length; i += 4) {
+      let avg = (d[i] + d[i+1] + d[i+2]) / 3;
+      avg = avg < 120 ? 0 : 255; // Sırf qara və ağ edirik
+      d[i] = d[i+1] = d[i+2] = avg;
     }
-    return null;
+    ctx.putImageData(imgData, 0, 0);
+
+    return hiddenCanvas;
   }
 
-  // ƏSAS DÜYMƏNİN FUNKSİYASI
+  function extract8DigitLot(text) {
+    if (!text) return null;
+    const cleanText = text.replace(/[\r\n\s]+/g, '');
+    const match = cleanText.match(/\d{8}/);
+    return match ? match[0] : null;
+  }
+
   mainActionBtn.addEventListener('click', async () => {
-    // 1. Əgər artıq Lot tapılıbsa, Düyməyə basanda Bitcars-a gedir
     if (currentFoundLot) {
       window.open(`https://bid.cars/en/search/archived/results?search-type=typing&query=${currentFoundLot}`, '_blank');
       return;
     }
 
-    // 2. Əgər hələ tapılmayıbsa, Şəkli Çəkir
     mainActionBtn.disabled = true;
-    mainActionBtn.innerText = '⏳ ƏLAQƏ QURULUR...';
-    
-    const base64Image = captureFrameBase64();
+    mainActionBtn.innerText = '⏳ ANALİZ EDİLİR...';
+    statusEl.textContent = '🧠 Rəqəmlər oxunur...';
+
+    const canvasFrame = processFrameForZoom();
     video.pause();
 
-    const lotCode = await askGeminiAI(base64Image);
+    try {
+      const result = await tesseractWorker.recognize(canvasFrame);
+      const lotCode = extract8DigitLot(result.data.text);
 
-    if (lotCode) {
-      currentFoundLot = lotCode;
-      statusEl.textContent = '✅ LOT TAPILDI!';
-      
-      // DÜYMƏ BİDCARS AXTARIŞINA ÇEVRİLİR
-      mainActionBtn.classList.add('searching');
-      mainActionBtn.innerHTML = `🚀 ${lotCode} - BID.CARS-DA AXTAR`;
-      mainActionBtn.disabled = false;
-    } else {
-      statusEl.textContent = '❌ Lot tapılmadı. Zəhmət olmasa təkrar çəkin.';
+      if (lotCode) {
+        currentFoundLot = lotCode;
+        statusEl.textContent = '✅ LOT TAPILDI!';
+        mainActionBtn.classList.add('searching');
+        mainActionBtn.innerHTML = `🚀 ${lotCode} - BID.CARS-DA AXTAR`;
+        mainActionBtn.disabled = false;
+      } else {
+        statusEl.textContent = '❌ Lot tapılmadı. Şəkli biraz daha kəskin çəkin.';
+        mainActionBtn.innerText = '📸 YENİDƏN ŞƏKİL ÇƏK';
+        mainActionBtn.disabled = false;
+      }
+    } catch (e) {
+      statusEl.textContent = '⚠️ Analiz xətası oldu. Yenidən cəhd edin.';
       mainActionBtn.innerText = '📸 YENİDƏN ŞƏKİL ÇƏK';
       mainActionBtn.disabled = false;
     }
@@ -238,9 +230,9 @@
 
   startBtn.addEventListener('click', async () => {
     startBtn.disabled = true;
-    statusEl.textContent = 'Kamera başladılır...';
     try {
       await startCamera();
+      await initLocalAI();
       startOverlay.style.display = 'none';
       statusEl.textContent = '📸 Çərçivəyə salıb düyməyə basın';
     } catch (err) {
