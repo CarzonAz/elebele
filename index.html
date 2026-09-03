@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-<title>VIN & Lot Multi-Scanner</title>
+<title>Lot & VIN Scanner</title>
 <style>
   * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
   html, body {
@@ -34,26 +34,25 @@
   #status { 
     font-size: 14px; color: #ffecb3; text-align: center; font-weight: 700; 
     background: rgba(0,0,0,0.85); padding: 8px 16px; border-radius: 20px;
+    max-width: 90%;
   }
 
-  /* ƏSAS DÜYMƏ / AXTARIŞ DÜYMƏLƏRİ CONTAINER-İ */
   #actionContainer {
     width: 100%; max-width: 400px;
-    display: flex; flex-direction: column; gap: 10px;
+    display: flex; flex-direction: column; gap: 8px;
   }
 
   .btn {
-    width: 100%; padding: 16px 12px; font-size: 16px; font-weight: 800;
+    width: 100%; padding: 15px 12px; font-size: 15px; font-weight: 800;
     border: none; border-radius: 14px; text-align: center; cursor: pointer;
     display: flex; justify-content: center; align-items: center; gap: 8px;
     transition: all 0.2s ease; text-decoration: none; box-shadow: 0 4px 15px rgba(0,0,0,0.4);
   }
   .btn:active { transform: scale(0.96); }
 
-  #scanBtn { background: #ffca28; color: #000; }
-  
-  #bidcarsBtn { background: #00ff9d; color: #000; display: none; }
-  #googleBtn { background: #4285F4; color: #fff; display: none; }
+  #scanBtn { background: #ffca28; color: #000; font-size: 17px; padding: 18px 12px; }
+  .bid-btn { background: #00ff9d; color: #000; }
+  .google-btn { background: #4285F4; color: #fff; }
 
   #retakeBtn {
     display: none; background: rgba(255,255,255,0.2); border: 1px solid #aaa;
@@ -83,22 +82,19 @@
   <div id="targetFrame"></div>
 
   <div id="panel">
-    <div id="status">📸 VIN və ya Lot nömrəsini çərçivəyə salın</div>
+    <div id="status">📸 Lot nömrəsi və ya VIN kodu çərçivəyə salın</div>
     
     <div id="actionContainer">
       <button id="scanBtn" class="btn">📸 ŞƏKLİ ÇƏK VƏ ANALİZ ET</button>
-      
-      <!-- NƏTİCƏ TAPILANDA AÇILAN 2 DÜYMƏ -->
-      <a id="bidcarsBtn" class="btn" target="_blank" rel="noopener">🚀 BID.CARS-DA AXTAR</a>
-      <a id="googleBtn" class="btn" target="_blank" rel="noopener">🔍 GOOGLE-DA AXTAR</a>
+      <div id="dynamicButtons" style="display:none; flex-direction:column; gap:8px;"></div>
     </div>
     
     <button id="retakeBtn">Yenidən Çək 🔄</button>
   </div>
 
   <div id="startOverlay">
-    <h1>VIN & Lot Auto Scanner 🚗</h1>
-    <p>VIN kod və Lot nömrəsi üçün Bid.cars və Google axtarış sistemi.</p>
+    <h1>Lot & VIN Multi-Scanner 🚀</h1>
+    <p>Bid.cars və Google axtarış dəstəkli skaner.</p>
     <button id="startBtn">Kameranı Aç</button>
   </div>
 </div>
@@ -111,8 +107,7 @@
   const statusEl = document.getElementById('status');
   
   const scanBtn = document.getElementById('scanBtn');
-  const bidcarsBtn = document.getElementById('bidcarsBtn');
-  const googleBtn = document.getElementById('googleBtn');
+  const dynamicButtons = document.getElementById('dynamicButtons');
   const retakeBtn = document.getElementById('retakeBtn');
   
   const startOverlay = document.getElementById('startOverlay');
@@ -181,32 +176,42 @@
 
       if (data && data.ParsedResults && data.ParsedResults.length > 0) {
         const text = data.ParsedResults[0].ParsedText;
-        return extractCode(text);
+        return extractStrictCodes(text);
       }
     } catch (e) {
       console.error(e);
     }
-    return null;
+    return { lot: null, vin: null };
   }
 
-  // HEM VIN KODU (17 simvol), HƏM LOT NÖMRƏSİNİ (8 rəqəm) AXTARIR
-  function extractCode(text) {
-    if (!text) return null;
-    const cleanText = text.replace(/[\r\n\s]+/g, ' ').toUpperCase();
+  // LOT NÖMRƏSİNƏ BİRİNCİLİK VERƏN TƏMİZ AXTARIŞ
+  function extractStrictCodes(text) {
+    if (!text) return { lot: null, vin: null };
+    
+    // Mətni təmizləyirik
+    const rawText = text.toUpperCase();
+    
+    let foundLot = null;
+    let foundVin = null;
 
-    // 1. VIN Kod Axtarışı (17 Simvol: Standart VIN formatı I, O, Q istisna olmaqla)
-    const vinMatch = cleanText.match(/\b[A-HJ-NPR-Z0-9]{17}\b/);
-    if (vinMatch) {
-      return { type: 'VIN', code: vinMatch[0] };
-    }
-
-    // 2. Lot Nömrəsi Axtarışı (8 Rəqəm)
-    const lotMatch = cleanText.match(/\b\d{8}\b/);
+    // 1. ÖNCƏLİK: LOT NÖMRƏSİ (Dəqiq 8 rəqəm)
+    // Sırf 8 rəqəmdən ibarət kəsintisiz blok axtarırıq
+    const lotMatch = rawText.match(/\b\d{8}\b/) || rawText.match(/\d{8}/);
     if (lotMatch) {
-      return { type: 'LOT', code: lotMatch[0] };
+      foundLot = lotMatch[0];
     }
 
-    return null;
+    // 2. ÖNCƏLİK: VIN KOD (Tam 17 simvol, xüsusi simvollar və boşluqlar çıxılmaqla)
+    // VIN kodlarda I, O, Q hərfləri olmur
+    const cleanForVin = rawText.replace(/[^A-Z0-9]/g, '');
+    const vinMatch = cleanForVin.match(/[A-HJ-NPR-Z0-9]{17}/);
+    
+    // Əgər tapılan VIN Lot ilə üst-üstə düşmürsə və fərqlidirsə götürürük
+    if (vinMatch && (!foundLot || !vinMatch[0].includes(foundLot))) {
+      foundVin = vinMatch[0];
+    }
+
+    return { lot: foundLot, vin: foundVin };
   }
 
   scanBtn.addEventListener('click', async () => {
@@ -217,26 +222,34 @@
     const imageBlob = await captureFrameBlob();
     video.pause();
 
-    const result = await scanImageOnline(imageBlob);
+    const { lot, vin } = await scanImageOnline(imageBlob);
 
-    if (result) {
-      statusEl.textContent = `✅ ${result.type} TAPILDI: ${result.code}`;
-      
-      // Şəkil çəkmə düyməsini gizlədib 2 Axtarış düyməsini göstəririk
+    dynamicButtons.innerHTML = '';
+
+    if (lot || vin) {
       scanBtn.style.display = 'none';
 
-      // 1. Bid.cars Linki
-      bidcarsBtn.href = `https://bid.cars/en/search/archived/results?search-type=typing&query=${result.code}`;
-      bidcarsBtn.innerText = `🚀 ${result.code} - BID.CARS`;
-      bidcarsBtn.style.display = 'flex';
+      // Əgər LOT TAPILIBSSA (Əsas istəyimiz)
+      if (lot) {
+        statusEl.textContent = `✅ LOT TAPILDI: ${lot}`;
+        dynamicButtons.innerHTML += `
+          <a class="btn bid-btn" href="https://bid.cars/en/search/archived/results?search-type=typing&query=${lot}" target="_blank">🚀 ${lot} - BID.CARS-DA AXTAR</a>
+          <a class="btn google-btn" href="https://www.google.com/search?q=${lot}" target="_blank">🔍 ${lot} - GOOGLE-DA AXTAR</a>
+        `;
+      } 
+      // Əgər Lot yoxdursa, amma VIN tapılıbsa
+      else if (vin) {
+        statusEl.textContent = `✅ VIN TAPILDI: ${vin}`;
+        dynamicButtons.innerHTML += `
+          <a class="btn bid-btn" href="https://bid.cars/en/search/archived/results?search-type=typing&query=${vin}" target="_blank">🚀 ${vin} - BID.CARS-DA AXTAR</a>
+          <a class="btn google-btn" href="https://www.google.com/search?q=${vin}" target="_blank">🔍 ${vin} - GOOGLE-DA AXTAR</a>
+        `;
+      }
 
-      // 2. Google Linki
-      googleBtn.href = `https://www.google.com/search?q=${encodeURIComponent(result.code)}`;
-      googleBtn.innerText = `🔍 ${result.code} - GOOGLE`;
-      googleBtn.style.display = 'flex';
+      dynamicButtons.style.display = 'flex';
 
     } else {
-      statusEl.textContent = '❌ Nə VIN, nə de Lot nömrəsi tapılmadı. Yenidən çəkin.';
+      statusEl.textContent = '❌ Nə Lot nömrəsi, nə də VIN tapılmadı. Yenidən çəkin.';
       scanBtn.innerText = '📸 YENİDƏN ŞƏKİL ÇƏK';
       scanBtn.disabled = false;
     }
@@ -246,14 +259,14 @@
 
   retakeBtn.addEventListener('click', () => {
     video.play();
-    statusEl.textContent = '📸 VIN və ya Lot nömrəsini çərçivəyə salın';
+    statusEl.textContent = '📸 Lot nömrəsi və ya VIN kodu çərçivəyə salın';
     
     scanBtn.style.display = 'flex';
     scanBtn.innerText = '📸 ŞƏKLİ ÇƏK VƏ ANALİZ ET';
     scanBtn.disabled = false;
 
-    bidcarsBtn.style.display = 'none';
-    googleBtn.style.display = 'none';
+    dynamicButtons.style.display = 'none';
+    dynamicButtons.innerHTML = '';
     retakeBtn.style.display = 'none';
   });
 
@@ -262,7 +275,7 @@
     try {
       await startCamera();
       startOverlay.style.display = 'none';
-      statusEl.textContent = '📸 VIN və ya Lot nömrəsini çərçivəyə salın';
+      statusEl.textContent = '📸 Lot nömrəsi və ya VIN kodu çərçivəyə salın';
     } catch (err) {
       statusEl.textContent = 'Xəta: Kameraya icazə verilmədi.';
       startBtn.disabled = false;
