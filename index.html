@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-<title>Auto Lot & VIN Scanner</title>
+<title>Pro Lot Scanner</title>
 <style>
   * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
   html, body {
@@ -17,59 +17,56 @@
     position: absolute; inset: 0; width: 100%; height: 100%;
     object-fit: cover; display: block; background: #000;
   }
+  
+  /* Böyük Və Geniş Çərçivə (AFT BİRKALARI ÜÇÜN) */
   #targetFrame {
     position: absolute;
     border: 2px dashed #ffca28;
     border-radius: 12px;
-    box-shadow: 0 0 0 2000px rgba(0,0,0,0.72);
+    box-shadow: 0 0 0 2000px rgba(0,0,0,0.65);
     pointer-events: none;
     transition: border-color 0.2s ease, box-shadow 0.2s ease;
   }
   #targetFrame.found {
     border-color: #00ff9d;
     border-style: solid;
-    box-shadow: 0 0 0 2000px rgba(0,0,0,0.72), 0 0 24px rgba(0,255,157,0.7);
+    box-shadow: 0 0 0 2000px rgba(0,0,0,0.65), 0 0 25px rgba(0,255,157,0.8);
   }
   #scanLine {
-    position: absolute; left: 4%; right: 4%; height: 2px;
+    position: absolute; left: 2%; right: 2%; height: 2px;
     background: linear-gradient(90deg, transparent, #ffca28, transparent);
     top: 10%; pointer-events: none;
-    animation: scanmove 2.2s ease-in-out infinite; opacity: 0.85;
+    animation: scanmove 2s ease-in-out infinite; opacity: 0.9;
   }
-  @keyframes scanmove { 0% { top: 6%; } 50% { top: 94%; } 100% { top: 6%; } }
-  
+  @keyframes scanmove { 0% { top: 8%; } 50% { top: 92%; } 100% { top: 8%; } }
+
   #panel {
     position: absolute; left: 0; right: 0; bottom: 0;
     padding: 16px 18px calc(22px + env(safe-area-inset-bottom));
-    background: linear-gradient(180deg, rgba(0,0,0,0) 0%, #000 35%);
+    background: linear-gradient(180deg, rgba(0,0,0,0) 0%, #000 40%);
     display: flex; flex-direction: column; align-items: center; gap: 10px; z-index: 5;
   }
-  #status { font-size: 14px; color: #ffecb3; text-align: center; min-height: 18px; }
-  
-  /* Editable Code Display */
-  #codeContainer {
-    display: flex; align-items: center; gap: 8px; width: 100%; max-width: 420px;
-  }
+  #status { font-size: 14px; color: #ffecb3; text-align: center; font-weight: 600; }
+
   #codeInput {
-    width: 100%; font-size: 22px; font-weight: 700; text-align: center;
-    color: #fff; background: rgba(255,255,255,0.1); border: 1px solid #444;
-    border-radius: 10px; padding: 8px; letter-spacing: 1px; outline: none;
+    width: 100%; max-width: 420px; font-size: 24px; font-weight: 800; text-align: center;
+    color: #00ff9d; background: rgba(0,0,0,0.6); border: 2px solid #00ff9d;
+    border-radius: 12px; padding: 10px; letter-spacing: 2px; outline: none;
   }
-  #codeInput:focus { border-color: #ffca28; }
 
   #actionBtn {
     display: none; width: 100%; max-width: 420px; padding: 16px 10px;
-    font-size: 17px; font-weight: 700; color: #000; background: #ffca28;
+    font-size: 18px; font-weight: 800; color: #000; background: #ffca28;
     border: none; border-radius: 14px; text-decoration: none; text-align: center;
-    box-shadow: 0 4px 18px rgba(255,202,40,0.35); cursor: pointer;
+    box-shadow: 0 4px 20px rgba(255,202,40,0.4); cursor: pointer;
   }
-  #actionBtn.show { display: block; animation: pop 0.25s ease; }
-  @keyframes pop { from { transform: scale(0.92); opacity: 0.5; } to { transform: scale(1); opacity: 1; } }
+  #actionBtn.show { display: block; animation: pop 0.2s ease; }
+  @keyframes pop { from { transform: scale(0.9); opacity: 0; } to { transform: scale(1); opacity: 1; } }
 
   .controls { display: flex; gap: 10px; width: 100%; max-width: 420px; }
   .ctrl-btn {
-    flex: 1; background: rgba(255,255,255,0.12); border: 1px solid #555;
-    color: #eee; padding: 10px; border-radius: 10px; font-size: 13px; font-weight: 600;
+    flex: 1; background: rgba(255,255,255,0.15); border: 1px solid #666;
+    color: #fff; padding: 12px; border-radius: 10px; font-size: 14px; font-weight: 700;
   }
 
   #startOverlay {
@@ -77,15 +74,15 @@
     display: flex; flex-direction: column; align-items: center; justify-content: center;
     gap: 18px; z-index: 20; padding: 24px; text-align: center;
   }
-  #startOverlay h1 { font-size: 22px; color: #ffca28; margin: 0; }
-  #startOverlay p { font-size: 14px; color: #aaa; margin: 0; max-width: 320px; line-height: 1.5; }
+  #startOverlay h1 { font-size: 24px; color: #ffca28; margin: 0; }
+  #startOverlay p { font-size: 14px; color: #aaa; margin: 0; max-width: 300px; line-height: 1.5; }
   #startBtn {
-    padding: 16px 36px; font-size: 17px; font-weight: 700; color: #000;
+    padding: 16px 40px; font-size: 18px; font-weight: 800; color: #000;
     background: #ffca28; border: none; border-radius: 14px; cursor: pointer;
   }
   #topbar {
     position: absolute; top: env(safe-area-inset-top); left: 0; right: 0;
-    padding: 14px 16px; z-index: 5; font-size: 13px; color: #bbb; text-align: center;
+    padding: 14px 16px; z-index: 5; font-size: 13px; color: #ffca28; text-align: center; font-weight: 600;
   }
 </style>
 </head>
@@ -95,14 +92,12 @@
   <div id="targetFrame"></div>
   <div id="scanLine"></div>
 
-  <div id="topbar">Lot nömrəsini və ya VIN kodu çərçivəyə salın</div>
+  <div id="topbar">📷 Lot kağızını çərçivəyə yönəldin</div>
 
   <div id="panel">
-    <div id="status">Hazırlanır...</div>
-    <div id="codeContainer">
-      <input type="text" id="codeInput" placeholder="Skan edilən kod..." autocomplete="off">
-    </div>
-    <a id="actionBtn" href="#" target="_blank" rel="noopener">Bid.cars-da Axtar 🔍</a>
+    <div id="status">Kamera hazırlanır...</div>
+    <input type="text" id="codeInput" placeholder="Skan edilir..." autocomplete="off">
+    <a id="actionBtn" href="#" target="_blank" rel="noopener">Bid.cars-da Axtar 🚀</a>
     <div class="controls">
       <button id="torchBtn" class="ctrl-btn" style="display:none;">Fənər 🔦</button>
       <button id="resetBtn" class="ctrl-btn" style="display:none;">Yenidən Skan Et</button>
@@ -110,9 +105,9 @@
   </div>
 
   <div id="startOverlay">
-    <h1>Bid.cars Auto Scanner</h1>
-    <p>Gömrük həyətindəki avtomobillərin Lot nömrəsini və ya VIN kodunu kameraya göstərin.</p>
-    <button id="startBtn">Skana Başla</button>
+    <h1>Bid.cars Lot Scanner</h1>
+    <p>Gömrük həyətindəki maşınların Lot nömrələrini (məs: 42095834X) oxutmaq üçün başlayın.</p>
+    <button id="startBtn">Kameranı Aç</button>
   </div>
 </div>
 
@@ -137,11 +132,12 @@
   let videoTrack = null;
   let torchOn = false;
 
+  // Frame ölçüsü: Şəkildəki kimi enli kağızlar üçün uyğunlaşdırılıb
   function layoutFrame() {
     const w = window.innerWidth, h = window.innerHeight;
-    const frameW = Math.min(w * 0.85, 520);
-    const frameH = frameW * 0.38;
-    const left = (w - frameW) / 2, top = (h - frameH) / 2;
+    const frameW = Math.min(w * 0.90, 560);
+    const frameH = frameW * 0.45; // Enli düzbucaqlı
+    const left = (w - frameW) / 2, top = (h - frameH) / 2 - 30;
     targetFrame.style.width = frameW + 'px';
     targetFrame.style.height = frameH + 'px';
     targetFrame.style.left = left + 'px';
@@ -156,8 +152,8 @@
     const stream = await navigator.mediaDevices.getUserMedia({
       video: {
         facingMode: { ideal: 'environment' },
-        width: { ideal: 1280 }, height: { ideal: 720 },
-        advanced: [{ focusMode: "continuous" }]
+        width: { ideal: 1920 }, // Yüksək keyfiyyət
+        height: { ideal: 1080 }
       },
       audio: false
     });
@@ -165,11 +161,8 @@
     videoTrack = stream.getVideoTracks()[0];
     await video.play();
 
-    // Flashlight Check
     const capabilities = videoTrack.getCapabilities ? videoTrack.getCapabilities() : {};
-    if (capabilities.torch) {
-      torchBtn.style.display = 'block';
-    }
+    if (capabilities.torch) torchBtn.style.display = 'block';
   }
 
   torchBtn.addEventListener('click', async () => {
@@ -178,120 +171,78 @@
     await videoTrack.applyConstraints({ advanced: [{ torch: torchOn }] });
   });
 
-  const ANGLES = [0, -10, 10, -20, 20];
+  // Şəkildəki kimi çəp/meyilli kağızları oxumaq üçün geniş bucaqlar
+  const ANGLES = [0, -15, 15, -30, 30];
 
-  function getRawSquareCrop() {
+  function getFrameCanvas() {
     const vw = video.videoWidth, vh = video.videoHeight;
     const iw = window.innerWidth, ih = window.innerHeight;
     if (!vw || !vh) return null;
 
     const scale = Math.max(iw / vw, ih / vh);
     const rect = targetFrame.getBoundingClientRect();
-    const cx = rect.left + rect.width / 2, cy = rect.top + rect.height / 2;
 
-    const squareSidePx = rect.width * 1.25;
-    const nSide = squareSidePx / scale;
-    const nx = (cx - (iw - vw * scale) / 2) / scale - nSide / 2;
-    const ny = (cy - (ih - vh * scale) / 2) / scale - nSide / 2;
-
-    const UPSCALE = 2.2;
-    const outSide = Math.max(1, Math.round(nSide * UPSCALE));
+    const frameX = (rect.left - (iw - vw * scale) / 2) / scale;
+    const frameY = (rect.top - (ih - vh * scale) / 2) / scale;
+    const frameW = rect.width / scale;
+    const frameH = rect.height / scale;
 
     const canvas = document.createElement('canvas');
-    canvas.width = outSide; canvas.height = outSide;
+    canvas.width = frameW * 1.5;
+    canvas.height = frameH * 1.5;
     const ctx = canvas.getContext('2d');
-    ctx.drawImage(video, nx, ny, nSide, nSide, 0, 0, outSide, outSide);
-
-    const imgData = ctx.getImageData(0, 0, outSide, outSide);
-    const d = imgData.data;
-    for (let i = 0; i < d.length; i += 4) {
-      const g = 0.299 * d[i] + 0.587 * d[i + 1] + 0.114 * d[i + 2];
-      d[i] = d[i + 1] = d[i + 2] = g;
-    }
-    ctx.putImageData(imgData, 0, 0);
-
-    return { canvas, frameW: rect.width, frameH: rect.height };
+    ctx.drawImage(video, frameX, frameY, frameW, frameH, 0, 0, canvas.width, canvas.height);
+    return canvas;
   }
 
-  function rotateAndBinarize(rawCanvas, angleDeg, outW, outH) {
+  function processRotation(rawCanvas, angle) {
+    const w = rawCanvas.width, h = rawCanvas.height;
     const canvas = document.createElement('canvas');
-    canvas.width = outW; canvas.height = outH;
+    canvas.width = w; canvas.height = h;
     const ctx = canvas.getContext('2d');
-    ctx.translate(outW / 2, outH / 2);
-    ctx.rotate((angleDeg * Math.PI) / 180);
-    ctx.drawImage(rawCanvas, -rawCanvas.width / 2, -rawCanvas.height / 2);
-    ctx.setTransform(1, 0, 0, 1, 0, 0);
-
-    const imgData = ctx.getImageData(0, 0, outW, outH);
-    const d = imgData.data;
-    let sum = 0;
-    for (let i = 0; i < d.length; i += 4) sum += d[i];
-    const threshold = (sum / (outW * outH)) * 0.90;
-
-    for (let i = 0; i < d.length; i += 4) {
-      const v = d[i] > threshold ? 255 : 0;
-      d[i] = d[i + 1] = d[i + 2] = v;
-    }
-    ctx.putImageData(imgData, 0, 0);
+    ctx.translate(w / 2, h / 2);
+    ctx.rotate((angle * Math.PI) / 180);
+    ctx.drawImage(rawCanvas, -w / 2, -h / 2);
     return canvas;
   }
 
   async function initWorker() {
     worker = await Tesseract.createWorker('eng', 1, { logger: () => {} });
     await worker.setParameters({
-      // Lot nömrəsi və VIN kodları üçün icazə verilən simvollar
-      tessedit_char_whitelist: '0123456789ABCDEFGHJKLMNPRSTUVWXYZxX',
-      tessedit_pageseg_mode: Tesseract.PSM.SINGLE_LINE
+      // 0-9 rəqəmləri və X/x hərfi
+      tessedit_char_whitelist: '0123456789xX',
+      tessedit_pageseg_mode: Tesseract.PSM.SPARSE_TEXT
     });
   }
 
-  // Regex 1: Exact 8-digit Lot
-  const LOT_REGEX = /^\d{8}$/;
-  // Regex 2: Standard 17-character VIN (Excludes I, O, Q)
-  const VIN_REGEX = /^[A-HJ-NPR-Z0-9]{17}$/;
+  // REGEX: Şəkildəki kimi 8 rəqəm + istəyə bağlı sonda "X" hərfi (Məs: 42095834 və ya 42095834X)
+  const LOT_PATTERN = /\b\d{7,8}[xX]?\b/;
 
-  function extractCode(result) {
-    const words = (result && result.data && result.data.words) || [];
-    for (const w of words) {
-      const cleaned = (w.text || '').replace(/[^A-Za-z0-9]/g, '').toUpperCase();
-      if ((LOT_REGEX.test(cleaned) || VIN_REGEX.test(cleaned)) && w.confidence >= 50) {
-        return cleaned;
-      }
-    }
-    const fullText = ((result && result.data && result.data.text) || '').replace(/[^A-Za-z0-9]/g, '').toUpperCase();
-    if (LOT_REGEX.test(fullText) || VIN_REGEX.test(fullText)) {
-      return fullText;
+  function extractLotCode(text) {
+    if (!text) return null;
+    const cleanText = text.replace(/[\r\n]+/g, ' ');
+    const match = cleanText.match(LOT_PATTERN);
+    if (match) {
+      return match[0].toUpperCase();
     }
     return null;
   }
-
-  let candidateCode = null, candidateHits = 0;
 
   async function scanLoop() {
     if (!scanning || found || busy) return;
     busy = true;
     try {
-      const raw = getRawSquareCrop();
-      if (raw) {
-        const outW = Math.round(raw.frameW * 2.2);
-        const outH = Math.round(raw.frameH * 2.5);
-
+      const rawCanvas = getFrameCanvas();
+      if (rawCanvas) {
         for (const angle of ANGLES) {
           if (found) break;
-          const canvas = rotateAndBinarize(raw.canvas, angle, outW, outH);
-          const result = await worker.recognize(canvas);
-          const code = extractCode(result);
+          const rotated = processRotation(rawCanvas, angle);
+          const result = await worker.recognize(rotated);
+          const code = extractLotCode(result.data.text);
 
           if (code) {
-            if (code === candidateCode) candidateHits++;
-            else { candidateCode = code; candidateHits = 1; }
-
-            if (candidateHits >= 2) {
-              handleFound(candidateCode);
-              break;
-            } else {
-              statusEl.textContent = 'Yoxlanılır: ' + candidateCode;
-            }
+            handleFound(code);
+            break;
           }
         }
       }
@@ -300,32 +251,35 @@
   }
 
   function startScanning() {
-    scanning = true; candidateCode = null; candidateHits = 0;
-    statusEl.textContent = 'Skan edilir...';
-    scanTimer = setInterval(scanLoop, 500);
+    scanning = true;
+    statusEl.textContent = 'Skan edilir... Kağızı çərçivədə saxlayın';
+    scanTimer = setInterval(scanLoop, 400);
   }
 
   function handleFound(code) {
     found = true;
     clearInterval(scanTimer);
     targetFrame.classList.add('found');
-    statusEl.textContent = 'Kod Tapıldı!';
+    statusEl.textContent = '✅ LOT TAPILDI!';
     codeInput.value = code;
 
-    updateSearchLink(code);
+    updateUrl(code);
     actionBtn.classList.add('show');
     resetBtn.style.display = 'block';
+
+    // Tapılan kimi 0.8 san sonra avtomatik keçid edir
+    setTimeout(() => {
+      window.location.href = actionBtn.href;
+    }, 800);
   }
 
-  function updateSearchLink(code) {
-    // bid.cars axtarış keçidi
-    actionBtn.href = `https://bid.cars/en/search/results?q=${encodeURIComponent(code)}`;
+  function updateUrl(code) {
+    actionBtn.href = `https://bid.cars/en/search/archived/results?search-type=typing&query=${encodeURIComponent(code)}`;
   }
 
-  // Düzəliş edilə bilsin deyə input dəyişdikdə linki yeniləyirik
   codeInput.addEventListener('input', () => {
     const val = codeInput.value.trim();
-    if (val) updateSearchLink(val);
+    if (val) updateUrl(val);
   });
 
   resetBtn.addEventListener('click', () => {
@@ -343,7 +297,7 @@
     try {
       await startCamera();
       startOverlay.style.display = 'none';
-      statusEl.textContent = 'OCR tənzimlənir...';
+      statusEl.textContent = 'Skaner hazırlanır...';
       await initWorker();
       startScanning();
     } catch (err) {
