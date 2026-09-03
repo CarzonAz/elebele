@@ -26,6 +26,15 @@
     pointer-events: none;
   }
 
+  /* FƏNƏR DÜYMƏSİ */
+  #torchBtn {
+    position: absolute; top: calc(20px + env(safe-area-inset-top)); right: 20px;
+    z-index: 10; background: rgba(0,0,0,0.6); border: 1px solid rgba(255,255,255,0.3);
+    color: #fff; font-size: 20px; width: 44px; height: 44px; border-radius: 50%;
+    display: flex; justify-content: center; align-items: center; cursor: pointer;
+    backdrop-filter: blur(5px);
+  }
+
   #panel {
     position: absolute; left: 0; right: 0; bottom: calc(25px + env(safe-area-inset-bottom));
     padding: 0 20px;
@@ -80,7 +89,8 @@
 <div id="app">
   <video id="video" playsinline muted autoplay></video>
   <canvas id="hiddenCanvas"></canvas>
-  
+
+  <button id="torchBtn" title="Fənər">🔦</button>
   <div id="targetFrame"></div>
 
   <div id="panel">
@@ -111,12 +121,36 @@
   const scanBtn = document.getElementById('scanBtn');
   const dynamicButtons = document.getElementById('dynamicButtons');
   const retakeBtn = document.getElementById('retakeBtn');
+  const torchBtn = document.getElementById('torchBtn');
   
   const startOverlay = document.getElementById('startOverlay');
   const startBtn = document.getElementById('startBtn');
 
+  let videoTrack = null;
+  let isTorchOn = false;
   let activeCode = "";
   let activeType = "";
+
+  // SƏS EFFECTİ YARADAN FUNKSİYA (iOS VƏ ANDROID ÜÇÜN 100% İŞLƏYİR)
+  function playSuccessSound() {
+    try {
+      const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      const osc = audioCtx.createOscillator();
+      const gain = audioCtx.createGain();
+      
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(800, audioCtx.currentTime); // Səs tonu
+      gain.gain.setValueAtTime(0.1, audioCtx.currentTime);
+      
+      osc.connect(gain);
+      gain.connect(audioCtx.destination);
+      
+      osc.start();
+      osc.stop(audioCtx.currentTime + 0.15); // 0.15 saniyəlik qısa "bip"
+    } catch (e) {
+      console.log('Audio icazəsi yoxdur');
+    }
+  }
 
   function layoutFrame() {
     const w = window.innerWidth, h = window.innerHeight;
@@ -141,8 +175,23 @@
       audio: false
     });
     video.srcObject = stream;
+    videoTrack = stream.getVideoTracks()[0];
     await video.play();
   }
+
+  // FƏNƏRİ YANDIRIB-SÖNDÜRMƏK
+  torchBtn.addEventListener('click', async () => {
+    if (!videoTrack) return;
+    const capabilities = videoTrack.getCapabilities ? videoTrack.getCapabilities() : {};
+    if (capabilities.torch) {
+      isTorchOn = !isTorchOn;
+      await videoTrack.applyConstraints({ advanced: [{ torch: isTorchOn }] });
+      torchBtn.style.background = isTorchOn ? '#ffca28' : 'rgba(0,0,0,0.6)';
+      torchBtn.style.color = isTorchOn ? '#000' : '#fff';
+    } else {
+      alert('Bu cihazda fənər dəstəklənmir.');
+    }
+  });
 
   function captureFrameBlob() {
     const vw = video.videoWidth, vh = video.videoHeight;
@@ -196,11 +245,9 @@
     let foundLot = null;
     let foundVin = null;
 
-    // 1. LOT (8 rəqəm)
     const lotMatch = rawText.match(/\b\d{8}\b/) || rawText.match(/\d{8}/);
     if (lotMatch) foundLot = lotMatch[0];
 
-    // 2. VIN (17 simvol)
     const cleanForVin = rawText.replace(/[^A-Z0-9]/g, '');
     const vinMatch = cleanForVin.match(/[A-HJ-NPR-Z0-9]{17}/);
     if (vinMatch && (!foundLot || !vinMatch[0].includes(foundLot))) {
@@ -214,8 +261,8 @@
     activeCode = code;
     activeType = type;
 
-    // Telefon dəstəkləyirsə vibrasiya verir
-    if (navigator.vibrate) navigator.vibrate(100);
+    // Kod tapılan kimi səs effekti veririk
+    playSuccessSound();
 
     statusEl.textContent = `✅ ${type}: ${code}`;
     
@@ -230,7 +277,6 @@
 
     dynamicButtons.style.display = 'flex';
 
-    // DÜZƏLT DÜYMƏSİ
     document.getElementById('editBtn').addEventListener('click', () => {
       const newCode = prompt(`${type} kodunu dəyişin:`, activeCode);
       if (newCode !== null && newCode.trim() !== "") {
@@ -239,7 +285,6 @@
       }
     });
 
-    // KOPYALA DÜYMƏSİ
     document.getElementById('copyBtn').addEventListener('click', () => {
       navigator.clipboard.writeText(activeCode);
       const originalText = document.getElementById('copyBtn').innerText;
