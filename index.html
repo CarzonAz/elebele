@@ -3,129 +3,89 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-<title>Lot Scanner - Bid.cars Archive</title>
+<title>Auto Lot & VIN Scanner</title>
 <style>
   * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
   html, body {
     margin: 0; padding: 0; width: 100%; height: 100%;
     background: #000000; overflow: hidden;
-    font-family: -apple-system, BlinkMacSystemFont, "Helvetica Neue", Arial, sans-serif;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
     color: #fff;
   }
-  #app {
-    position: fixed; inset: 0; width: 100%; height: 100%;
-    background: #000;
-  }
+  #app { position: fixed; inset: 0; width: 100%; height: 100%; background: #000; }
   video {
-    position: absolute; inset: 0;
-    width: 100%; height: 100%;
-    object-fit: cover;
-    display: block;
-    background: #000;
+    position: absolute; inset: 0; width: 100%; height: 100%;
+    object-fit: cover; display: block; background: #000;
   }
-  /* Dim everything outside the target frame using a giant box-shadow */
   #targetFrame {
     position: absolute;
     border: 2px dashed #ffca28;
-    border-radius: 10px;
+    border-radius: 12px;
     box-shadow: 0 0 0 2000px rgba(0,0,0,0.72);
     pointer-events: none;
-    transition: border-color 0.15s ease;
+    transition: border-color 0.2s ease, box-shadow 0.2s ease;
   }
   #targetFrame.found {
     border-color: #00ff9d;
     border-style: solid;
-    box-shadow: 0 0 0 2000px rgba(0,0,0,0.72), 0 0 20px 4px rgba(0,255,157,0.6);
+    box-shadow: 0 0 0 2000px rgba(0,0,0,0.72), 0 0 24px rgba(0,255,157,0.7);
   }
   #scanLine {
-    position: absolute;
-    left: 4%; right: 4%;
-    height: 2px;
+    position: absolute; left: 4%; right: 4%; height: 2px;
     background: linear-gradient(90deg, transparent, #ffca28, transparent);
-    top: 10%;
-    pointer-events: none;
-    animation: scanmove 2.2s ease-in-out infinite;
-    opacity: 0.85;
+    top: 10%; pointer-events: none;
+    animation: scanmove 2.2s ease-in-out infinite; opacity: 0.85;
   }
-  @keyframes scanmove {
-    0% { top: 6%; }
-    50% { top: 94%; }
-    100% { top: 6%; }
-  }
+  @keyframes scanmove { 0% { top: 6%; } 50% { top: 94%; } 100% { top: 6%; } }
+  
   #panel {
-    position: absolute;
-    left: 0; right: 0; bottom: 0;
+    position: absolute; left: 0; right: 0; bottom: 0;
     padding: 16px 18px calc(22px + env(safe-area-inset-bottom));
-    background: linear-gradient(180deg, rgba(0,0,0,0) 0%, #000 28%);
-    display: flex; flex-direction: column; align-items: center; gap: 12px;
-    z-index: 5;
+    background: linear-gradient(180deg, rgba(0,0,0,0) 0%, #000 35%);
+    display: flex; flex-direction: column; align-items: center; gap: 10px; z-index: 5;
   }
-  #status {
-    font-size: 15px;
-    color: #ffecb3;
-    letter-spacing: 0.2px;
-    min-height: 20px;
-    text-align: center;
-    font-variant-numeric: tabular-nums;
+  #status { font-size: 14px; color: #ffecb3; text-align: center; min-height: 18px; }
+  
+  /* Editable Code Display */
+  #codeContainer {
+    display: flex; align-items: center; gap: 8px; width: 100%; max-width: 420px;
   }
-  #code {
-    font-size: 26px;
-    font-weight: 700;
-    letter-spacing: 1px;
-    color: #ffffff;
-    min-height: 30px;
+  #codeInput {
+    width: 100%; font-size: 22px; font-weight: 700; text-align: center;
+    color: #fff; background: rgba(255,255,255,0.1); border: 1px solid #444;
+    border-radius: 10px; padding: 8px; letter-spacing: 1px; outline: none;
   }
+  #codeInput:focus { border-color: #ffca28; }
+
   #actionBtn {
-    display: none;
-    width: 100%;
-    max-width: 420px;
-    padding: 16px 10px;
-    font-size: 18px;
-    font-weight: 700;
-    color: #000;
-    background: #ffca28;
-    border: none;
-    border-radius: 14px;
-    text-decoration: none;
-    text-align: center;
-    box-shadow: 0 4px 18px rgba(255,202,40,0.35);
+    display: none; width: 100%; max-width: 420px; padding: 16px 10px;
+    font-size: 17px; font-weight: 700; color: #000; background: #ffca28;
+    border: none; border-radius: 14px; text-decoration: none; text-align: center;
+    box-shadow: 0 4px 18px rgba(255,202,40,0.35); cursor: pointer;
   }
   #actionBtn.show { display: block; animation: pop 0.25s ease; }
-  @keyframes pop { from { transform: scale(0.9); opacity: 0.4; } to { transform: scale(1); opacity: 1; } }
+  @keyframes pop { from { transform: scale(0.92); opacity: 0.5; } to { transform: scale(1); opacity: 1; } }
 
-  #resetBtn {
-    display: none;
-    background: none;
-    border: 1px solid #444;
-    color: #ccc;
-    padding: 10px 16px;
-    border-radius: 10px;
-    font-size: 14px;
+  .controls { display: flex; gap: 10px; width: 100%; max-width: 420px; }
+  .ctrl-btn {
+    flex: 1; background: rgba(255,255,255,0.12); border: 1px solid #555;
+    color: #eee; padding: 10px; border-radius: 10px; font-size: 13px; font-weight: 600;
   }
-  #resetBtn.show { display: block; }
 
   #startOverlay {
-    position: absolute; inset: 0;
-    background: #000;
+    position: absolute; inset: 0; background: #000;
     display: flex; flex-direction: column; align-items: center; justify-content: center;
     gap: 18px; z-index: 20; padding: 24px; text-align: center;
   }
-  #startOverlay h1 { font-size: 20px; margin: 0 0 4px; color: #ffca28; }
-  #startOverlay p { font-size: 14px; color: #999; margin: 0; max-width: 320px; line-height: 1.5; }
+  #startOverlay h1 { font-size: 22px; color: #ffca28; margin: 0; }
+  #startOverlay p { font-size: 14px; color: #aaa; margin: 0; max-width: 320px; line-height: 1.5; }
   #startBtn {
-    margin-top: 10px;
-    padding: 16px 34px;
-    font-size: 17px;
-    font-weight: 700;
-    color: #000;
-    background: #ffca28;
-    border: none;
-    border-radius: 14px;
+    padding: 16px 36px; font-size: 17px; font-weight: 700; color: #000;
+    background: #ffca28; border: none; border-radius: 14px; cursor: pointer;
   }
   #topbar {
     position: absolute; top: env(safe-area-inset-top); left: 0; right: 0;
-    padding: 14px 16px; z-index: 5;
-    font-size: 13px; color: #aaa; text-align: center;
+    padding: 14px 16px; z-index: 5; font-size: 13px; color: #bbb; text-align: center;
   }
 </style>
 </head>
@@ -135,18 +95,23 @@
   <div id="targetFrame"></div>
   <div id="scanLine"></div>
 
-  <div id="topbar">8 rəqəmli Lot nömrəsini sarı çərçivəyə salın</div>
+  <div id="topbar">Lot nömrəsini və ya VIN kodu çərçivəyə salın</div>
 
   <div id="panel">
     <div id="status">Hazırlanır...</div>
-    <div id="code"></div>
-    <a id="actionBtn" href="#" target="_blank" rel="noopener">Bid.cars Arxivində Aç 📁</a>
-    <button id="resetBtn">Yenidən Skan Et</button>
+    <div id="codeContainer">
+      <input type="text" id="codeInput" placeholder="Skan edilən kod..." autocomplete="off">
+    </div>
+    <a id="actionBtn" href="#" target="_blank" rel="noopener">Bid.cars-da Axtar 🔍</a>
+    <div class="controls">
+      <button id="torchBtn" class="ctrl-btn" style="display:none;">Fənər 🔦</button>
+      <button id="resetBtn" class="ctrl-btn" style="display:none;">Yenidən Skan Et</button>
+    </div>
   </div>
 
   <div id="startOverlay">
-    <h1>Bid.cars Arxiv Skaneri</h1>
-    <p>Kamera icazəsi tələb olunur. Başlamaq üçün düyməyə toxunun və avtomobil şüşəsindəki 8 rəqəmli lot kodunu çərçivəyə tuşlayın.</p>
+    <h1>Bid.cars Auto Scanner</h1>
+    <p>Gömrük həyətindəki avtomobillərin Lot nömrəsini və ya VIN kodunu kameraya göstərin.</p>
     <button id="startBtn">Skana Başla</button>
   </div>
 </div>
@@ -157,9 +122,10 @@
   const video = document.getElementById('video');
   const targetFrame = document.getElementById('targetFrame');
   const statusEl = document.getElementById('status');
-  const codeEl = document.getElementById('code');
+  const codeInput = document.getElementById('codeInput');
   const actionBtn = document.getElementById('actionBtn');
   const resetBtn = document.getElementById('resetBtn');
+  const torchBtn = document.getElementById('torchBtn');
   const startOverlay = document.getElementById('startOverlay');
   const startBtn = document.getElementById('startBtn');
 
@@ -168,15 +134,14 @@
   let busy = false;
   let found = false;
   let scanTimer = null;
+  let videoTrack = null;
+  let torchOn = false;
 
-  // ---------- Target frame geometry (CSS) ----------
   function layoutFrame() {
-    const w = window.innerWidth;
-    const h = window.innerHeight;
-    const frameW = Math.min(w * 0.82, 520);
-    const frameH = frameW * 0.42;
-    const left = (w - frameW) / 2;
-    const top = (h - frameH) / 2;
+    const w = window.innerWidth, h = window.innerHeight;
+    const frameW = Math.min(w * 0.85, 520);
+    const frameH = frameW * 0.38;
+    const left = (w - frameW) / 2, top = (h - frameH) / 2;
     targetFrame.style.width = frameW + 'px';
     targetFrame.style.height = frameH + 'px';
     targetFrame.style.left = left + 'px';
@@ -187,106 +152,54 @@
   window.addEventListener('resize', layoutFrame);
   layoutFrame();
 
-  // ---------- Web Audio beep ----------
-  let audioCtx = null;
-  function beep() {
-    try {
-      audioCtx = audioCtx || new (window.AudioContext || window.webkitAudioContext)();
-      const osc = audioCtx.createOscillator();
-      const gain = audioCtx.createGain();
-      osc.type = 'square';
-      osc.frequency.setValueAtTime(1500, audioCtx.currentTime);
-      gain.gain.setValueAtTime(0.001, audioCtx.currentTime);
-      gain.gain.exponentialRampToValueAtTime(0.25, audioCtx.currentTime + 0.01);
-      gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.18);
-      osc.connect(gain).connect(audioCtx.destination);
-      osc.start();
-      osc.stop(audioCtx.currentTime + 0.2);
-    } catch (e) { /* ignore */ }
-  }
-
-  // ---------- Camera ----------
-  let cameraRestarting = false;
-
   async function startCamera() {
     const stream = await navigator.mediaDevices.getUserMedia({
       video: {
         facingMode: { ideal: 'environment' },
-        width: { ideal: 1280 },
-        height: { ideal: 720 }
+        width: { ideal: 1280 }, height: { ideal: 720 },
+        advanced: [{ focusMode: "continuous" }]
       },
       audio: false
     });
     video.srcObject = stream;
+    videoTrack = stream.getVideoTracks()[0];
     await video.play();
 
-    stream.getVideoTracks().forEach((track) => {
-      track.addEventListener('ended', () => restartCamera());
-    });
-  }
-
-  async function restartCamera() {
-    if (cameraRestarting || found) return;
-    cameraRestarting = true;
-    try {
-      statusEl.textContent = 'Kamera bərpa olunur...';
-      await startCamera();
-      if (!scanning) startScanning();
-    } catch (e) {
-      statusEl.textContent = 'Kamera bərpa olunmadı, səhifəni yeniləyin.';
-    } finally {
-      cameraRestarting = false;
+    // Flashlight Check
+    const capabilities = videoTrack.getCapabilities ? videoTrack.getCapabilities() : {};
+    if (capabilities.torch) {
+      torchBtn.style.display = 'block';
     }
   }
 
-  document.addEventListener('visibilitychange', () => {
-    if (document.visibilityState !== 'visible') return;
-    if (!video.srcObject) return;
-    const tracks = video.srcObject.getTracks();
-    const live = tracks.some((t) => t.readyState === 'live');
-    if (!live) {
-      restartCamera();
-    } else if (video.paused) {
-      video.play().catch(() => restartCamera());
-    }
-  });
-  window.addEventListener('pageshow', () => {
-    if (video.srcObject && video.paused) {
-      video.play().catch(() => restartCamera());
-    }
+  torchBtn.addEventListener('click', async () => {
+    if (!videoTrack) return;
+    torchOn = !torchOn;
+    await videoTrack.applyConstraints({ advanced: [{ torch: torchOn }] });
   });
 
-  const ANGLES = [0, -12, 12, -24, 24, -34, 34];
+  const ANGLES = [0, -10, 10, -20, 20];
 
-  // ---------- Grab a larger, oversized grayscale square around the frame ----------
   function getRawSquareCrop() {
     const vw = video.videoWidth, vh = video.videoHeight;
     const iw = window.innerWidth, ih = window.innerHeight;
     if (!vw || !vh) return null;
 
     const scale = Math.max(iw / vw, ih / vh);
-    const scaledW = vw * scale, scaledH = vh * scale;
-    const offsetX = (iw - scaledW) / 2;
-    const offsetY = (ih - scaledH) / 2;
-
     const rect = targetFrame.getBoundingClientRect();
-    const cx = rect.left + rect.width / 2;
-    const cy = rect.top + rect.height / 2;
+    const cx = rect.left + rect.width / 2, cy = rect.top + rect.height / 2;
 
-    const squareSidePx = rect.width * 1.2;
-
+    const squareSidePx = rect.width * 1.25;
     const nSide = squareSidePx / scale;
-    const nx = (cx - offsetX) / scale - nSide / 2;
-    const ny = (cy - offsetY) / scale - nSide / 2;
+    const nx = (cx - (iw - vw * scale) / 2) / scale - nSide / 2;
+    const ny = (cy - (ih - vh * scale) / 2) / scale - nSide / 2;
 
-    const UPSCALE = 2.4;
+    const UPSCALE = 2.2;
     const outSide = Math.max(1, Math.round(nSide * UPSCALE));
 
     const canvas = document.createElement('canvas');
-    canvas.width = outSide;
-    canvas.height = outSide;
+    canvas.width = outSide; canvas.height = outSide;
     const ctx = canvas.getContext('2d');
-    ctx.imageSmoothingEnabled = true;
     ctx.drawImage(video, nx, ny, nSide, nSide, 0, 0, outSide, outSide);
 
     const imgData = ctx.getImageData(0, 0, outSide, outSide);
@@ -300,13 +213,10 @@
     return { canvas, frameW: rect.width, frameH: rect.height };
   }
 
-  // ---------- Rotate crop & binarize ----------
   function rotateAndBinarize(rawCanvas, angleDeg, outW, outH) {
     const canvas = document.createElement('canvas');
-    canvas.width = outW;
-    canvas.height = outH;
+    canvas.width = outW; canvas.height = outH;
     const ctx = canvas.getContext('2d');
-    ctx.imageSmoothingEnabled = true;
     ctx.translate(outW / 2, outH / 2);
     ctx.rotate((angleDeg * Math.PI) / 180);
     ctx.drawImage(rawCanvas, -rawCanvas.width / 2, -rawCanvas.height / 2);
@@ -315,140 +225,115 @@
     const imgData = ctx.getImageData(0, 0, outW, outH);
     const d = imgData.data;
     let sum = 0;
-    const gray = new Uint8ClampedArray(outW * outH);
-    for (let i = 0, p = 0; i < d.length; i += 4, p++) {
-      gray[p] = d[i];
-      sum += d[i];
-    }
-    const mean = sum / gray.length;
-    const threshold = mean * 0.92;
-    for (let i = 0, p = 0; i < d.length; i += 4, p++) {
-      const v = gray[p] > threshold ? 255 : 0;
+    for (let i = 0; i < d.length; i += 4) sum += d[i];
+    const threshold = (sum / (outW * outH)) * 0.90;
+
+    for (let i = 0; i < d.length; i += 4) {
+      const v = d[i] > threshold ? 255 : 0;
       d[i] = d[i + 1] = d[i + 2] = v;
-      d[i + 3] = 255;
     }
-    ctx.imageSmoothingEnabled = false;
     ctx.putImageData(imgData, 0, 0);
     return canvas;
   }
 
-  // ---------- OCR loop ----------
   async function initWorker() {
     worker = await Tesseract.createWorker('eng', 1, { logger: () => {} });
     await worker.setParameters({
-      tessedit_char_whitelist: '0123456789xX',
+      // Lot nömrəsi və VIN kodları üçün icazə verilən simvollar
+      tessedit_char_whitelist: '0123456789ABCDEFGHJKLMNPRSTUVWXYZxX',
       tessedit_pageseg_mode: Tesseract.PSM.SINGLE_LINE
     });
   }
 
-  const EXACT_CODE = /^\d{8}[xX]?$/;
-  const MIN_WORD_CONFIDENCE = 45;
+  // Regex 1: Exact 8-digit Lot
+  const LOT_REGEX = /^\d{8}$/;
+  // Regex 2: Standard 17-character VIN (Excludes I, O, Q)
+  const VIN_REGEX = /^[A-HJ-NPR-Z0-9]{17}$/;
 
   function extractCode(result) {
     const words = (result && result.data && result.data.words) || [];
-    let best = null;
     for (const w of words) {
-      const cleaned = (w.text || '').replace(/[^0-9xX]/g, '').toUpperCase();
-      if (EXACT_CODE.test(cleaned) && (!best || w.confidence > best.confidence)) {
-        best = { code: cleaned, confidence: w.confidence };
+      const cleaned = (w.text || '').replace(/[^A-Za-z0-9]/g, '').toUpperCase();
+      if ((LOT_REGEX.test(cleaned) || VIN_REGEX.test(cleaned)) && w.confidence >= 50) {
+        return cleaned;
       }
     }
-    if (best && best.confidence >= MIN_WORD_CONFIDENCE) return best.code;
-
-    const cleanedAll = ((result && result.data && result.data.text) || '')
-      .replace(/[^0-9xX]/g, '')
-      .toUpperCase();
-    return EXACT_CODE.test(cleanedAll) ? cleanedAll : null;
+    const fullText = ((result && result.data && result.data.text) || '').replace(/[^A-Za-z0-9]/g, '').toUpperCase();
+    if (LOT_REGEX.test(fullText) || VIN_REGEX.test(fullText)) {
+      return fullText;
+    }
+    return null;
   }
 
-  let candidateCode = null;
-  let candidateHits = 0;
+  let candidateCode = null, candidateHits = 0;
 
   async function scanLoop() {
     if (!scanning || found || busy) return;
     busy = true;
-    const watchdog = setTimeout(() => { busy = false; }, 9000);
     try {
       const raw = getRawSquareCrop();
       if (raw) {
-        const UPSCALE = 2.4;
-        const outW = Math.max(1, Math.round(raw.frameW * UPSCALE));
-        const outH = Math.max(1, Math.round(raw.frameH * UPSCALE * 1.3));
+        const outW = Math.round(raw.frameW * 2.2);
+        const outH = Math.round(raw.frameH * 2.5);
 
-        let codeThisTick = null;
         for (const angle of ANGLES) {
           if (found) break;
           const canvas = rotateAndBinarize(raw.canvas, angle, outW, outH);
           const result = await worker.recognize(canvas);
           const code = extractCode(result);
-          if (code) { codeThisTick = code; break; }
-        }
 
-        if (codeThisTick) {
-          if (codeThisTick === candidateCode) {
-            candidateHits++;
-          } else {
-            candidateCode = codeThisTick;
-            candidateHits = 1;
-          }
-          if (candidateHits >= 2) {
-            handleFound(candidateCode);
-          } else {
-            statusEl.textContent = 'Yoxlanılır: ' + candidateCode;
+          if (code) {
+            if (code === candidateCode) candidateHits++;
+            else { candidateCode = code; candidateHits = 1; }
+
+            if (candidateHits >= 2) {
+              handleFound(candidateCode);
+              break;
+            } else {
+              statusEl.textContent = 'Yoxlanılır: ' + candidateCode;
+            }
           }
         }
       }
-    } catch (e) {
-      // swallow single-frame errors
-    }
-    clearTimeout(watchdog);
+    } catch (e) {}
     busy = false;
   }
 
   function startScanning() {
-    scanning = true;
-    candidateCode = null;
-    candidateHits = 0;
+    scanning = true; candidateCode = null; candidateHits = 0;
     statusEl.textContent = 'Skan edilir...';
-    scanTimer = setInterval(scanLoop, 650);
+    scanTimer = setInterval(scanLoop, 500);
   }
 
-  function stopScanning() {
-    scanning = false;
-    if (scanTimer) clearInterval(scanTimer);
-    scanTimer = null;
-  }
-
-  // ---------- BID.CARS ARCHIVE INTEGRATION ----------
   function handleFound(code) {
-    if (found) return;
     found = true;
-    stopScanning();
-
-    beep();
+    clearInterval(scanTimer);
     targetFrame.classList.add('found');
-    statusEl.textContent = 'Tapıldı: ' + code;
-    codeEl.textContent = code;
+    statusEl.textContent = 'Kod Tapıldı!';
+    codeInput.value = code;
 
-    // Direct Bid.cars archived search URL (No API / CORS block)
-    const bidCarsUrl = `https://bid.cars/en/search/archived/results?search-type=typing&query=${encodeURIComponent(code)}`;
-
-    actionBtn.href = bidCarsUrl;
+    updateSearchLink(code);
     actionBtn.classList.add('show');
-    resetBtn.classList.add('show');
-
-    // Automatically redirect after 700ms
-    setTimeout(() => {
-      window.location.href = bidCarsUrl;
-    }, 700);
+    resetBtn.style.display = 'block';
   }
+
+  function updateSearchLink(code) {
+    // bid.cars axtarış keçidi
+    actionBtn.href = `https://bid.cars/en/search/results?q=${encodeURIComponent(code)}`;
+  }
+
+  // Düzəliş edilə bilsin deyə input dəyişdikdə linki yeniləyirik
+  codeInput.addEventListener('input', () => {
+    const val = codeInput.value.trim();
+    if (val) updateSearchLink(val);
+  });
 
   resetBtn.addEventListener('click', () => {
     found = false;
     targetFrame.classList.remove('found');
-    codeEl.textContent = '';
+    codeInput.value = '';
     actionBtn.classList.remove('show');
-    resetBtn.classList.remove('show');
+    resetBtn.style.display = 'none';
     startScanning();
   });
 
@@ -458,11 +343,11 @@
     try {
       await startCamera();
       startOverlay.style.display = 'none';
-      statusEl.textContent = 'OCR yüklənir...';
+      statusEl.textContent = 'OCR tənzimlənir...';
       await initWorker();
       startScanning();
     } catch (err) {
-      statusEl.textContent = 'Xəta: kameraya icazə verilmədi.';
+      statusEl.textContent = 'Xəta: Kameraya icazə verilmədi.';
       startBtn.disabled = false;
     }
   });
