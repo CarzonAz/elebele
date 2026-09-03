@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-<title>Clean Lot & VIN Scanner</title>
+<title>Crop & Scan VIN/Lot</title>
 <style>
   * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
   html, body {
@@ -26,10 +26,35 @@
     pointer-events: none;
   }
 
+  /* CROP CONTAINER (ŞƏKLİ KƏSMƏK ÜÇÜN INTERFEYS) */
+  #cropOverlay {
+    display: none;
+    position: absolute; inset: 0; z-index: 10; background: rgba(0,0,0,0.85);
+    touch-action: none;
+  }
+  #cropCanvas {
+    position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain;
+  }
+  #cropBox {
+    position: absolute;
+    border: 2px dashed #00ff9d;
+    box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.6);
+    background: rgba(0, 255, 157, 0.1);
+    cursor: move;
+  }
+  .handle {
+    position: absolute; width: 22px; height: 22px; background: #00ff9d;
+    border-radius: 50%; border: 2px solid #000;
+  }
+  .handle-tl { top: -11px; left: -11px; cursor: nwse-resize; }
+  .handle-tr { top: -11px; right: -11px; cursor: nesw-resize; }
+  .handle-bl { bottom: -11px; left: -11px; cursor: nesw-resize; }
+  .handle-br { bottom: -11px; right: -11px; cursor: nwse-resize; }
+
   #panel {
-    position: absolute; left: 0; right: 0; bottom: calc(30px + env(safe-area-inset-bottom));
+    position: absolute; left: 0; right: 0; bottom: calc(25px + env(safe-area-inset-bottom));
     padding: 0 20px;
-    display: flex; flex-direction: column; align-items: center; gap: 10px; z-index: 5;
+    display: flex; flex-direction: column; align-items: center; gap: 10px; z-index: 15;
   }
   #status { 
     font-size: 14px; color: #ffecb3; text-align: center; font-weight: 700; 
@@ -51,6 +76,7 @@
   .btn:active { transform: scale(0.96); }
 
   #scanBtn { background: #ffca28; color: #000; font-size: 17px; padding: 18px 12px; }
+  #cropConfirmBtn { display: none; background: #00ff9d; color: #000; font-size: 17px; padding: 18px 12px; }
   .bid-btn { background: #00ff9d; color: #000; }
   .google-btn { background: #4285F4; color: #fff; }
   .edit-btn { background: #ff9800; color: #fff; font-size: 14px; padding: 10px; }
@@ -82,11 +108,23 @@
   
   <div id="targetFrame"></div>
 
+  <!-- KƏSMƏ REJİMİ İNTARFEYSİ -->
+  <div id="cropOverlay">
+    <canvas id="cropCanvas"></canvas>
+    <div id="cropBox">
+      <div class="handle handle-tl" data-handle="tl"></div>
+      <div class="handle handle-tr" data-handle="tr"></div>
+      <div class="handle handle-bl" data-handle="bl"></div>
+      <div class="handle handle-br" data-handle="br"></div>
+    </div>
+  </div>
+
   <div id="panel">
-    <div id="status">📸 Lot nömrəsi və ya VIN kodu çərçivəyə salın</div>
+    <div id="status">📸 Şəkli çəkin</div>
     
     <div id="actionContainer">
-      <button id="scanBtn" class="btn">📸 ŞƏKLİ ÇƏK VƏ ANALİZ ET</button>
+      <button id="scanBtn" class="btn">📸 ŞƏKLİ ÇƏK</button>
+      <button id="cropConfirmBtn" class="btn">✂️ SEÇİLƏN HİSSƏNİ ANALİZ ET</button>
       <div id="dynamicButtons" style="display:none; flex-direction:column; gap:8px;"></div>
     </div>
     
@@ -94,8 +132,8 @@
   </div>
 
   <div id="startOverlay">
-    <h1>Lot & VIN Smart Scanner 🚀</h1>
-    <p>Səliqəli interfeysli axtarış sistemi.</p>
+    <h1>Crop & Scan Scanner 🚀</h1>
+    <p>Dəqiq kəsmə və axtarış sistemi.</p>
     <button id="startBtn">Kameranı Aç</button>
   </div>
 </div>
@@ -108,20 +146,26 @@
   const statusEl = document.getElementById('status');
   
   const scanBtn = document.getElementById('scanBtn');
+  const cropConfirmBtn = document.getElementById('cropConfirmBtn');
   const dynamicButtons = document.getElementById('dynamicButtons');
   const retakeBtn = document.getElementById('retakeBtn');
   
   const startOverlay = document.getElementById('startOverlay');
   const startBtn = document.getElementById('startBtn');
 
+  const cropOverlay = document.getElementById('cropOverlay');
+  const cropCanvas = document.getElementById('cropCanvas');
+  const cropBox = document.getElementById('cropBox');
+
   let activeCode = "";
   let activeType = "";
+  let capturedImgData = null;
 
   function layoutFrame() {
     const w = window.innerWidth, h = window.innerHeight;
     const frameW = Math.min(w * 0.90, 560);
-    const frameH = frameW * 0.48;
-    const left = (w - frameW) / 2, top = (h - frameH) / 2 - 80;
+    const frameH = frameW * 0.50; // Standart rahat çərçivə
+    const left = (w - frameW) / 2, top = (h - frameH) / 2 - 60;
     targetFrame.style.width = frameW + 'px';
     targetFrame.style.height = frameH + 'px';
     targetFrame.style.left = left + 'px';
@@ -143,7 +187,8 @@
     await video.play();
   }
 
-  function captureFrameBlob() {
+  // 1. ŞƏKLİ ÇƏKİRİK VƏ KƏSMƏ REJİMİNƏ KEÇİRİK
+  scanBtn.addEventListener('click', () => {
     const vw = video.videoWidth, vh = video.videoHeight;
     const iw = window.innerWidth, ih = window.innerHeight;
 
@@ -155,17 +200,114 @@
     const frameW = rect.width / scale;
     const frameH = rect.height / scale;
 
-    hiddenCanvas.width = frameW;
-    hiddenCanvas.height = frameH;
-    const ctx = hiddenCanvas.getContext('2d');
+    cropCanvas.width = frameW;
+    cropCanvas.height = frameH;
+    const ctx = cropCanvas.getContext('2d');
     ctx.drawImage(video, frameX, frameY, frameW, frameH, 0, 0, frameW, frameH);
 
-    return new Promise(resolve => hiddenCanvas.toBlob(resolve, 'image/jpeg', 0.90));
-  }
+    video.pause();
+
+    // Crop Rejimini aktiv edirik
+    cropOverlay.style.display = 'block';
+    targetFrame.style.display = 'none';
+    scanBtn.style.display = 'none';
+    cropConfirmBtn.style.display = 'flex';
+    retakeBtn.style.display = 'block';
+
+    statusEl.textContent = '✂️ Barmağınızla çərçivəni YALNIZ VIN/Lot üstünə gətirin';
+
+    // Crop box-u mərkəzdə sıfırlayırıq
+    const boxW = cropCanvas.clientWidth * 0.8;
+    const boxH = cropCanvas.clientHeight * 0.4;
+    cropBox.style.width = boxW + 'px';
+    cropBox.style.height = boxH + 'px';
+    cropBox.style.left = (cropCanvas.clientWidth - boxW) / 2 + 'px';
+    cropBox.style.top = (cropCanvas.clientHeight - boxH) / 2 + 'px';
+  });
+
+  // BARMAQLA / SİÇANLA KƏSMƏ ÇƏRÇİVƏSİNİ İDARƏ ETMƏK
+  let isDragging = false, currentHandle = null;
+  let startX, startY, startL, startT, startW, startH;
+
+  cropBox.addEventListener('pointerdown', (e) => {
+    isDragging = true;
+    currentHandle = e.target.dataset.handle || null;
+    startX = e.clientX;
+    startY = e.clientY;
+    startL = cropBox.offsetLeft;
+    startT = cropBox.offsetTop;
+    startW = cropBox.offsetWidth;
+    startH = cropBox.offsetHeight;
+    cropBox.setPointerCapture(e.pointerId);
+  });
+
+  cropBox.addEventListener('pointermove', (e) => {
+    if (!isDragging) return;
+    const dx = e.clientX - startX;
+    const dy = e.clientY - startY;
+
+    if (!currentHandle) {
+      // Köçürmə (Drag)
+      cropBox.style.left = Math.max(0, Math.min(cropCanvas.clientWidth - startW, startL + dx)) + 'px';
+      cropBox.style.top = Math.max(0, Math.min(cropCanvas.clientHeight - startH, startT + dy)) + 'px';
+    } else {
+      // Ölçünü dəyişmə (Resize)
+      if (currentHandle === 'br') {
+        cropBox.style.width = Math.max(60, startW + dx) + 'px';
+        cropBox.style.height = Math.max(30, startH + dy) + 'px';
+      } else if (currentHandle === 'tl') {
+        const nw = Math.max(60, startW - dx);
+        const nh = Math.max(30, startH - dy);
+        cropBox.style.width = nw + 'px';
+        cropBox.style.height = nh + 'px';
+        cropBox.style.left = (startL + (startW - nw)) + 'px';
+        cropBox.style.top = (startT + (startH - nh)) + 'px';
+      }
+    }
+  });
+
+  cropBox.addEventListener('pointerup', () => { isDragging = false; });
+
+  // 2. KƏSİLMİŞ HİSSƏNİ BAZAYA GÖNDƏR
+  cropConfirmBtn.addEventListener('click', async () => {
+    cropConfirmBtn.disabled = true;
+    cropConfirmBtn.innerText = '⏳ ANALİZ EDİLİR...';
+    statusEl.textContent = '🧠 Yalnız seçilmiş hissə oxunur...';
+
+    // Canvas üzərindən seçilən x,y,w,h koordinatlarını götürürük
+    const scaleX = cropCanvas.width / cropCanvas.clientWidth;
+    const scaleY = cropCanvas.height / cropCanvas.clientHeight;
+
+    const cropX = cropBox.offsetLeft * scaleX;
+    const cropY = cropBox.offsetTop * scaleY;
+    const cropW = cropBox.offsetWidth * scaleX;
+    const cropH = cropBox.offsetHeight * scaleY;
+
+    hiddenCanvas.width = cropW;
+    hiddenCanvas.height = cropH;
+    const ctx = hiddenCanvas.getContext('2d');
+    ctx.drawImage(cropCanvas, cropX, cropY, cropW, cropH, 0, 0, cropW, cropH);
+
+    const blob = await new Promise(res => hiddenCanvas.toBlob(res, 'image/jpeg', 0.95));
+
+    const { lot, vin } = await scanImageOnline(blob);
+
+    cropOverlay.style.display = 'none';
+    cropConfirmBtn.style.display = 'none';
+
+    if (lot || vin) {
+      if (lot) renderActionButtons(lot, 'LOT');
+      else if (vin) renderActionButtons(vin, 'VIN');
+    } else {
+      statusEl.textContent = '❌ Kod tapılmadı. Zəhmət olmasa çərçivəni bir az genişləndirib təkrar yoxlayın.';
+      scanBtn.innerText = '📸 YENİDƏN ŞƏKİL ÇƏK';
+      scanBtn.style.display = 'flex';
+      scanBtn.disabled = false;
+      targetFrame.style.display = 'block';
+    }
+  });
 
   async function scanImageOnline(imageBlob) {
-    statusEl.textContent = '🧠 Şəkil analiz olunur...';
-    
     const formData = new FormData();
     formData.append('file', imageBlob, 'photo.jpg');
 
@@ -180,7 +322,7 @@
 
       if (data && data.ParsedResults && data.ParsedResults.length > 0) {
         const text = data.ParsedResults[0].ParsedText;
-        return extractStrictCodes(text);
+        return extractCodesUniversal(text);
       }
     } catch (e) {
       console.error(e);
@@ -188,18 +330,19 @@
     return { lot: null, vin: null };
   }
 
-  function extractStrictCodes(text) {
+  // TƏMİZ / AÇAR SÖZSÜZ UNİVERSAL AXTARIŞ (Çünki zatən yalnız lazım olan hissəni kəsmişik)
+  function extractCodesUniversal(text) {
     if (!text) return { lot: null, vin: null };
     const rawText = text.toUpperCase();
-    
+
     let foundLot = null;
     let foundVin = null;
 
-    // 1. LOT (8 rəqəm)
+    // 1. Dəqiq 8 Rəqəm (Lot)
     const lotMatch = rawText.match(/\b\d{8}\b/) || rawText.match(/\d{8}/);
     if (lotMatch) foundLot = lotMatch[0];
 
-    // 2. VIN (17 simvol)
+    // 2. Dəqiq 17 Simvol (VIN)
     const cleanForVin = rawText.replace(/[^A-Z0-9]/g, '');
     const vinMatch = cleanForVin.match(/[A-HJ-NPR-Z0-9]{17}/);
     if (vinMatch && (!foundLot || !vinMatch[0].includes(foundLot))) {
@@ -209,7 +352,6 @@
     return { lot: foundLot, vin: foundVin };
   }
 
-  // TƏMİZ DÜYMƏ STRUKTURU
   function renderActionButtons(code, type) {
     activeCode = code;
     activeType = type;
@@ -233,43 +375,20 @@
     });
   }
 
-  scanBtn.addEventListener('click', async () => {
-    scanBtn.disabled = true;
-    scanBtn.innerText = '⏳ ANALİZ EDİLİR...';
-    statusEl.textContent = '📸 Şəkil çəkilir...';
-
-    const imageBlob = await captureFrameBlob();
-    video.pause();
-
-    const { lot, vin } = await scanImageOnline(imageBlob);
-
-    dynamicButtons.innerHTML = '';
-
-    if (lot || vin) {
-      scanBtn.style.display = 'none';
-
-      if (lot) {
-        renderActionButtons(lot, 'LOT');
-      } else if (vin) {
-        renderActionButtons(vin, 'VIN');
-      }
-
-    } else {
-      statusEl.textContent = '❌ Kod tapılmadı. Yenidən çəkin.';
-      scanBtn.innerText = '📸 YENİDƏN ŞƏKİL ÇƏK';
-      scanBtn.disabled = false;
-    }
-
-    retakeBtn.style.display = 'block';
-  });
-
   retakeBtn.addEventListener('click', () => {
     video.play();
-    statusEl.textContent = '📸 Lot nömrəsi və ya VIN kodu çərçivəyə salın';
+    statusEl.textContent = '📸 Şəkli çəkin';
     
+    cropOverlay.style.display = 'none';
+    targetFrame.style.display = 'block';
+
     scanBtn.style.display = 'flex';
-    scanBtn.innerText = '📸 ŞƏKLİ ÇƏK VƏ ANALİZ ET';
+    scanBtn.innerText = '📸 ŞƏKLİ ÇƏK';
     scanBtn.disabled = false;
+
+    cropConfirmBtn.style.display = 'none';
+    cropConfirmBtn.innerText = '✂️ SEÇİLƏN HİSSƏNİ ANALİZ ET';
+    cropConfirmBtn.disabled = false;
 
     dynamicButtons.style.display = 'none';
     dynamicButtons.innerHTML = '';
@@ -281,7 +400,7 @@
     try {
       await startCamera();
       startOverlay.style.display = 'none';
-      statusEl.textContent = '📸 Lot nömrəsi və ya VIN kodu çərçivəyə salın';
+      statusEl.textContent = '📸 Şəkli çəkin';
     } catch (err) {
       statusEl.textContent = 'Xəta: Kameraya icazə verilmədi.';
       startBtn.disabled = false;
