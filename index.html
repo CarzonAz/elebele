@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-<title>iPhone Pro Lot Scanner</title>
+<title>Gemini AI Lot Scanner</title>
 <style>
   * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
   html, body {
@@ -24,48 +24,35 @@
     border-radius: 16px;
     box-shadow: 0 0 0 2000px rgba(0,0,0,0.7);
     pointer-events: none;
-    transition: all 0.3s ease;
   }
 
+  /* Paneli YUXARI qaldırdıq */
   #panel {
-    position: absolute; left: 0; right: 0; bottom: 0;
-    padding: 16px 18px calc(22px + env(safe-area-inset-bottom));
-    background: linear-gradient(180deg, rgba(0,0,0,0) 0%, #000 85%);
-    display: flex; flex-direction: column; align-items: center; gap: 12px; z-index: 5;
+    position: absolute; left: 0; right: 0; bottom: calc(40px + env(safe-area-inset-bottom));
+    padding: 0 20px;
+    display: flex; flex-direction: column; align-items: center; gap: 14px; z-index: 5;
   }
-  #status { font-size: 14px; color: #ffecb3; text-align: center; font-weight: 600; min-height: 24px; padding: 0 10px; }
-
-  #codeInput {
-    width: 100%; max-width: 420px; font-size: 28px; font-weight: 800; text-align: center;
-    color: #00ff9d; background: rgba(0,0,0,0.85); border: 2px solid #00ff9d;
-    border-radius: 14px; padding: 12px; letter-spacing: 4px; outline: none;
+  #status { 
+    font-size: 15px; color: #ffecb3; text-align: center; font-weight: 700; 
+    background: rgba(0,0,0,0.7); padding: 8px 16px; border-radius: 20px;
   }
 
-  #shutterBtn {
-    width: 76px; height: 76px; border-radius: 50%; background: #fff;
-    border: 5px solid #ffca28; display: flex; align-items: center; justify-content: center;
-    cursor: pointer; box-shadow: 0 0 20px rgba(255,202,40,0.6);
-    transition: transform 0.1s, background 0.2s, opacity 0.2s;
-  }
-  #shutterBtn:active { transform: scale(0.9); background: #ffca28; }
-  #shutterBtn div { width: 56px; height: 56px; border-radius: 50%; border: 2px solid #000; }
-  #shutterBtn.disabled { opacity: 0.4; pointer-events: none; }
-
-  #actionBtn {
-    width: 100%; max-width: 420px; padding: 16px 10px;
+  /* ƏSAS ÇÖZÜM: Şəkil çəkmə, Lot Nömrəsi və Bid.cars Axtarış tək düymədə */
+  #mainActionBtn {
+    width: 100%; max-width: 400px; padding: 18px 15px;
     font-size: 18px; font-weight: 800; color: #000; background: #ffca28;
-    border: none; border-radius: 14px; text-decoration: none; text-align: center;
-    box-shadow: 0 4px 20px rgba(255,202,40,0.4); cursor: pointer;
-    display: block; transition: opacity 0.2s;
+    border: none; border-radius: 16px; text-decoration: none; text-align: center;
+    box-shadow: 0 6px 25px rgba(255,202,40,0.5); cursor: pointer;
+    display: flex; justify-content: center; align-items: center; gap: 10px;
+    transition: all 0.2s ease;
   }
-  #actionBtn.disabled {
-    opacity: 0.4; pointer-events: none; background: #555; box-shadow: none; color: #aaa;
-  }
+  #mainActionBtn:active { transform: scale(0.96); }
+  #mainActionBtn.searching { background: #00ff9d; box-shadow: 0 6px 25px rgba(0,255,157,0.6); }
 
-  .controls { display: flex; gap: 10px; width: 100%; max-width: 420px; }
-  .ctrl-btn {
-    flex: 1; background: rgba(255,255,255,0.15); border: 1px solid #666;
-    color: #fff; padding: 12px; border-radius: 10px; font-size: 14px; font-weight: 700;
+  #retakeBtn {
+    display: none; background: rgba(255,255,255,0.2); border: 1px solid #aaa;
+    color: #fff; padding: 10px 20px; border-radius: 12px; font-size: 14px; font-weight: 700;
+    cursor: pointer;
   }
 
   #startOverlay {
@@ -79,10 +66,6 @@
     padding: 16px 40px; font-size: 18px; font-weight: 800; color: #000;
     background: #ffca28; border: none; border-radius: 14px; cursor: pointer;
   }
-  #topbar {
-    position: absolute; top: env(safe-area-inset-top); left: 0; right: 0;
-    padding: 14px 16px; z-index: 5; font-size: 13px; color: #ffca28; text-align: center; font-weight: 600;
-  }
   #hiddenCanvas { display: none; }
 </style>
 </head>
@@ -92,54 +75,44 @@
   <canvas id="hiddenCanvas"></canvas>
   
   <div id="targetFrame"></div>
-  <div id="topbar">📸 Maşının önündə dayanıb rahat şəkil çəkin</div>
 
   <div id="panel">
-    <div id="status">Kamera hazırlanır...</div>
+    <div id="status">📸 Çərçivəyə salıb düyməyə basın</div>
     
-    <input type="text" id="codeInput" placeholder="--------" maxlength="8" autocomplete="off">
+    <!-- YALNIZ BİR ƏSAS DÜYMƏ -->
+    <button id="mainActionBtn">📸 ŞƏKLİ ÇƏK VƏ ANALİZ ET</button>
     
-    <button id="shutterBtn" title="Şəkli Çək"><div></div></button>
-    
-    <a id="actionBtn" class="disabled" href="#" target="_blank" rel="noopener">Bid.cars-da Axtar 🚀</a>
-    
-    <div class="controls">
-      <button id="torchBtn" class="ctrl-btn" style="display:none;">Fənər 🔦</button>
-      <button id="retakeBtn" class="ctrl-btn" style="display:none;">Yenidən Çək 🔄</button>
-    </div>
+    <button id="retakeBtn">Yenidən Çək 🔄</button>
   </div>
 
   <div id="startOverlay">
-    <h1>iPhone Pro HD Lot Scanner</h1>
-    <p>Orijinal keyfiyyətlə uzaqdan çəkiliş. Yerli AI emalı.</p>
+    <h1>Google Gemini AI Scanner 🧠</h1>
+    <p>Gündəlik 1500 şəkil limitli yüksək dəqiqlikli AI skaner.</p>
     <button id="startBtn">Kameranı Aç</button>
   </div>
 </div>
 
-<script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
 <script>
 (function () {
+  // BURAYA PULSUZ GEMINI API AÇARINIZI QOYUN
+  const GEMINI_API_KEY = "YOUR_GEMINI_API_KEY"; 
+
   const video = document.getElementById('video');
   const hiddenCanvas = document.getElementById('hiddenCanvas');
   const targetFrame = document.getElementById('targetFrame');
   const statusEl = document.getElementById('status');
-  const codeInput = document.getElementById('codeInput');
-  const actionBtn = actionBtn = document.getElementById('actionBtn');
-  const shutterBtn = document.getElementById('shutterBtn');
+  const mainActionBtn = document.getElementById('mainActionBtn');
   const retakeBtn = document.getElementById('retakeBtn');
-  const torchBtn = document.getElementById('torchBtn');
   const startOverlay = document.getElementById('startOverlay');
   const startBtn = document.getElementById('startBtn');
 
-  let videoTrack = null;
-  let torchOn = false;
-  let tesseractWorker = null;
+  let currentFoundLot = null;
 
   function layoutFrame() {
     const w = window.innerWidth, h = window.innerHeight;
-    const frameW = Math.min(w * 0.92, 580);
-    const frameH = frameW * 0.50;
-    const left = (w - frameW) / 2, top = (h - frameH) / 2 - 40;
+    const frameW = Math.min(w * 0.90, 560);
+    const frameH = frameW * 0.48;
+    const left = (w - frameW) / 2, top = (h - frameH) / 2 - 80; // Çərçivəni də biraz yuxarı çəkdik
     targetFrame.style.width = frameW + 'px';
     targetFrame.style.height = frameH + 'px';
     targetFrame.style.left = left + 'px';
@@ -149,41 +122,19 @@
   layoutFrame();
 
   async function startCamera() {
-    // iPhone 15 Pro-nun maksimum 4K/HD keyfiyyətini tələb edirik
     const stream = await navigator.mediaDevices.getUserMedia({
       video: {
         facingMode: { ideal: 'environment' },
-        width: { ideal: 3840, min: 1920 },
-        height: { ideal: 2160, min: 1080 }
+        width: { ideal: 1920 },
+        height: { ideal: 1080 }
       },
       audio: false
     });
     video.srcObject = stream;
-    videoTrack = stream.getVideoTracks()[0];
     await video.play();
-
-    const capabilities = videoTrack.getCapabilities ? videoTrack.getCapabilities() : {};
-    if (capabilities.torch) torchBtn.style.display = 'block';
   }
 
-  torchBtn.addEventListener('click', async () => {
-    if (!videoTrack) return;
-    torchOn = !torchOn;
-    await videoTrack.applyConstraints({ advanced: [{ torch: torchOn }] });
-  });
-
-  // Tesseract AI motorunu iPhone-un daxilində başladırıq
-  async function initLocalAI() {
-    statusEl.textContent = '🧠 Daxili AI hazırlanır...';
-    tesseractWorker = await Tesseract.createWorker('eng');
-    await tesseractWorker.setParameters({
-      tessedit_char_whitelist: '0123456789xX',
-      tessedit_pageseg_mode: Tesseract.PSM.AUTO,
-    });
-  }
-
-  // UZAQDAN ÇƏKİLƏN ŞƏKLİ ULTRA-KƏSKİNLƏŞDİRMƏ VƏ BÖYÜTMƏ
-  function captureFullHDFrame() {
+  function captureFrameBase64() {
     const vw = video.videoWidth, vh = video.videoHeight;
     const iw = window.innerWidth, ih = window.innerHeight;
 
@@ -195,105 +146,105 @@
     const frameW = rect.width / scale;
     const frameH = rect.height / scale;
 
-    // Şəklin keyfiyyətini aşağı salmırıq, əksinə 2 DƏFƏ ZUM (Scale) verib böyüdürük
-    const zoomFactor = 2; 
-    hiddenCanvas.width = frameW * zoomFactor;
-    hiddenCanvas.height = frameH * zoomFactor;
+    hiddenCanvas.width = frameW;
+    hiddenCanvas.height = frameH;
     const ctx = hiddenCanvas.getContext('2d');
-
-    // Şəkli çəkirik
-    ctx.drawImage(video, frameX, frameY, frameW, frameH, 0, 0, hiddenCanvas.width, hiddenCanvas.height);
-
-    // Kəskinlik və Kontrast Filtri (Uzaqdan çəkilən kağızı oxumaq üçün)
-    const imgData = ctx.getImageData(0, 0, hiddenCanvas.width, hiddenCanvas.height);
-    const d = imgData.data;
-    for (let i = 0; i < d.length; i += 4) {
-      // Kontrastı artırırıq
-      let v = (d[i] + d[i+1] + d[i+2]) / 3;
-      v = v < 130 ? v * 0.6 : Math.min(255, v * 1.3);
-      d[i] = d[i+1] = d[i+2] = v;
-    }
-    ctx.putImageData(imgData, 0, 0);
-
-    return hiddenCanvas;
+    ctx.drawImage(video, frameX, frameY, frameW, frameH, 0, 0, frameW, frameH);
+    
+    // Base64 prefiksini təmizləyirik
+    return hiddenCanvas.toDataURL('image/jpeg', 0.85).split(',')[1];
   }
 
-  function extract8DigitLot(text) {
-    if (!text) return null;
-    const cleanText = text.replace(/[\r\n]+/g, ' ');
-    // 8 rəqəmli bloku tapırıq
-    const matches = cleanText.match(/\b\d{8}\b/g);
-    if (matches && matches.length > 0) return matches[0];
+  // GOOGLE GEMINI 1.5 FLASH PULSUZ AI ANALİZİ
+  async function askGeminiAI(base64Data) {
+    statusEl.textContent = '🧠 Google AI şəklə baxır...';
     
-    // Sonda x/X olsa belə 8 rəqəmi ayırırıq
-    const altMatch = cleanText.match(/\d{8}/);
-    return altMatch ? altMatch[0] : null;
-  }
+    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${GEMINI_API_KEY}`;
+    
+    const promptText = "Find the 8-digit car lot number in this image. Return ONLY the 8 digits. If there is a letter like X at the end, ignore it and return ONLY 8 numbers. If not found, return NONE.";
 
-  shutterBtn.addEventListener('click', async () => {
-    shutterBtn.classList.add('disabled');
-    shutterBtn.style.display = 'none';
-    statusEl.innerHTML = '🧠 iPhone AI şəkli analiz edir...';
-    
-    const canvasFrame = captureFullHDFrame();
-    video.pause();
+    const bodyData = {
+      contents: [{
+        parts: [
+          { text: promptText },
+          { inline_data: { mime_type: "image/jpeg", data: base64Data } }
+        ]
+      }]
+    };
 
     try {
-      const result = await tesseractWorker.recognize(canvasFrame);
-      const code = extract8DigitLot(result.data.text);
+      const response = await fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(bodyData)
+      });
 
-      if (code) {
-        statusEl.innerHTML = '✅ <span style="color:#00ff9d">8 RƏQƏMLİ LOT TAPILDI!</span>';
-        codeInput.value = code;
-        updateUrl(code);
-      } else {
-        statusEl.innerHTML = '⚠️ Lot tapılmadı. Şəkildə rəqəmlərin görünməsinə əmin olun.';
-        statusEl.style.color = '#ffca28';
-        codeInput.value = '';
-        actionBtn.classList.add('disabled');
+      const data = await response.json();
+      
+      if (data.candidates && data.candidates[0].content.parts[0].text) {
+        const aiResponse = data.candidates[0].content.parts[0].text.trim();
+        const digits = aiResponse.replace(/\D/g, '');
+        return digits.length === 8 ? digits : null;
       }
     } catch (e) {
-      statusEl.innerHTML = '<span style="color:#ff5252">Xəta baş verdi. Yenidən cəhd edin.</span>';
+      console.error(e);
+    }
+    return null;
+  }
+
+  // ƏSAS DÜYMƏNİN FUNKSİYASI
+  mainActionBtn.addEventListener('click', async () => {
+    // 1. Əgər artıq Lot tapılıbsa, Düyməyə basanda Bitcars-a gedir
+    if (currentFoundLot) {
+      window.open(`https://bid.cars/en/search/archived/results?search-type=typing&query=${currentFoundLot}`, '_blank');
+      return;
     }
 
-    shutterBtn.classList.remove('disabled');
+    // 2. Əgər hələ tapılmayıbsa, Şəkli Çəkir
+    mainActionBtn.disabled = true;
+    mainActionBtn.innerText = '⏳ ƏLAQƏ QURULUR...';
+    
+    const base64Image = captureFrameBase64();
+    video.pause();
+
+    const lotCode = await askGeminiAI(base64Image);
+
+    if (lotCode) {
+      currentFoundLot = lotCode;
+      statusEl.textContent = '✅ LOT TAPILDI!';
+      
+      // DÜYMƏ BİDCARS AXTARIŞINA ÇEVRİLİR
+      mainActionBtn.classList.add('searching');
+      mainActionBtn.innerHTML = `🚀 ${lotCode} - BID.CARS-DA AXTAR`;
+      mainActionBtn.disabled = false;
+    } else {
+      statusEl.textContent = '❌ Lot tapılmadı. Zəhmət olmasa təkrar çəkin.';
+      mainActionBtn.innerText = '📸 YENİDƏN ŞƏKİL ÇƏK';
+      mainActionBtn.disabled = false;
+    }
+
     retakeBtn.style.display = 'block';
   });
 
   retakeBtn.addEventListener('click', () => {
     video.play();
-    codeInput.value = '';
-    actionBtn.classList.add('disabled');
-    statusEl.innerHTML = 'Maşının önündə dayanıb rahat şəkil çəkin';
-    statusEl.style.color = '#ffecb3';
-    shutterBtn.style.display = 'flex';
+    currentFoundLot = null;
+    statusEl.textContent = '📸 Çərçivəyə salıb düyməyə basın';
+    mainActionBtn.classList.remove('searching');
+    mainActionBtn.innerText = '📸 ŞƏKLİ ÇƏK VƏ ANALİZ ET';
+    mainActionBtn.disabled = false;
     retakeBtn.style.display = 'none';
-  });
-
-  function updateUrl(code) {
-    const cleanCode = code.replace(/\D/g, '');
-    if (cleanCode.length === 8) {
-      actionBtn.href = `https://bid.cars/en/search/archived/results?search-type=typing&query=${cleanCode}`;
-      actionBtn.classList.remove('disabled');
-    } else {
-      actionBtn.classList.add('disabled');
-    }
-  }
-
-  codeInput.addEventListener('input', () => {
-    updateUrl(codeInput.value.trim());
   });
 
   startBtn.addEventListener('click', async () => {
     startBtn.disabled = true;
-    statusEl.textContent = 'Kamera vı AI başladılır...';
+    statusEl.textContent = 'Kamera başladılır...';
     try {
       await startCamera();
-      await initLocalAI();
       startOverlay.style.display = 'none';
-      statusEl.textContent = 'Maşının önündə dayanıb rahat şəkil çəkin';
+      statusEl.textContent = '📸 Çərçivəyə salıb düyməyə basın';
     } catch (err) {
-      statusEl.textContent = 'Xəta: Kameraya və ya AI-a icazə verilmədi.';
+      statusEl.textContent = 'Xəta: Kameraya icazə verilmədi.';
       startBtn.disabled = false;
     }
   });
