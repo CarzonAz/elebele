@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-<title>Lot & VIN Scanner</title>
+<title>Editable Lot & VIN Scanner</title>
 <style>
   * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
   html, body {
@@ -27,7 +27,7 @@
   }
 
   #panel {
-    position: absolute; left: 0; right: 0; bottom: calc(40px + env(safe-area-inset-bottom));
+    position: absolute; left: 0; right: 0; bottom: calc(30px + env(safe-area-inset-bottom));
     padding: 0 20px;
     display: flex; flex-direction: column; align-items: center; gap: 10px; z-index: 5;
   }
@@ -53,6 +53,7 @@
   #scanBtn { background: #ffca28; color: #000; font-size: 17px; padding: 18px 12px; }
   .bid-btn { background: #00ff9d; color: #000; }
   .google-btn { background: #4285F4; color: #fff; }
+  .edit-btn { background: #ff9800; color: #fff; font-size: 14px; padding: 10px; }
 
   #retakeBtn {
     display: none; background: rgba(255,255,255,0.2); border: 1px solid #aaa;
@@ -93,8 +94,8 @@
   </div>
 
   <div id="startOverlay">
-    <h1>Lot & VIN Multi-Scanner 🚀</h1>
-    <p>Bid.cars və Google axtarış dəstəkli skaner.</p>
+    <h1>Lot & VIN Smart Scanner 🚀</h1>
+    <p>Düzəliş dəstəkli Bid.cars və Google axtarış sistemi.</p>
     <button id="startBtn">Kameranı Aç</button>
   </div>
 </div>
@@ -112,6 +113,9 @@
   
   const startOverlay = document.getElementById('startOverlay');
   const startBtn = document.getElementById('startBtn');
+
+  let activeCode = "";
+  let activeType = ""; // 'LOT' və ya 'VIN'
 
   function layoutFrame() {
     const w = window.innerWidth, h = window.innerHeight;
@@ -184,34 +188,50 @@
     return { lot: null, vin: null };
   }
 
-  // LOT NÖMRƏSİNƏ BİRİNCİLİK VERƏN TƏMİZ AXTARIŞ
   function extractStrictCodes(text) {
     if (!text) return { lot: null, vin: null };
-    
-    // Mətni təmizləyirik
     const rawText = text.toUpperCase();
     
     let foundLot = null;
     let foundVin = null;
 
-    // 1. ÖNCƏLİK: LOT NÖMRƏSİ (Dəqiq 8 rəqəm)
-    // Sırf 8 rəqəmdən ibarət kəsintisiz blok axtarırıq
+    // 1. LOT (8 rəqəm)
     const lotMatch = rawText.match(/\b\d{8}\b/) || rawText.match(/\d{8}/);
-    if (lotMatch) {
-      foundLot = lotMatch[0];
-    }
+    if (lotMatch) foundLot = lotMatch[0];
 
-    // 2. ÖNCƏLİK: VIN KOD (Tam 17 simvol, xüsusi simvollar və boşluqlar çıxılmaqla)
-    // VIN kodlarda I, O, Q hərfləri olmur
+    // 2. VIN (17 simvol)
     const cleanForVin = rawText.replace(/[^A-Z0-9]/g, '');
     const vinMatch = cleanForVin.match(/[A-HJ-NPR-Z0-9]{17}/);
-    
-    // Əgər tapılan VIN Lot ilə üst-üstə düşmürsə və fərqlidirsə götürürük
     if (vinMatch && (!foundLot || !vinMatch[0].includes(foundLot))) {
       foundVin = vinMatch[0];
     }
 
     return { lot: foundLot, vin: foundVin };
+  }
+
+  // DÜYMƏLƏRİ YENİLƏYƏN FUNKSİYA
+  function renderActionButtons(code, type) {
+    activeCode = code;
+    activeType = type;
+
+    statusEl.textContent = `✅ ${type} TAPILDI: ${code}`;
+    
+    dynamicButtons.innerHTML = `
+      <button id="editBtn" class="btn edit-btn">✏️ Kodu Düzəlt: ${code}</button>
+      <a class="btn bid-btn" href="https://bid.cars/en/search/archived/results?search-type=typing&query=${code}" target="_blank">🚀 ${code} - BID.CARS</a>
+      <a class="btn google-btn" href="https://www.google.com/search?q=${code}" target="_blank">🔍 ${code} - GOOGLE</a>
+    `;
+
+    dynamicButtons.style.display = 'flex';
+
+    // EDIT DÜYMƏSİNİN HADİSƏSİ
+    document.getElementById('editBtn').addEventListener('click', () => {
+      const newCode = prompt(`${type} kodunda dəyişiklik edin:`, activeCode);
+      if (newCode !== null && newCode.trim() !== "") {
+        const cleaned = newCode.trim().toUpperCase();
+        renderActionButtons(cleaned, activeType);
+      }
+    });
   }
 
   scanBtn.addEventListener('click', async () => {
@@ -229,24 +249,11 @@
     if (lot || vin) {
       scanBtn.style.display = 'none';
 
-      // Əgər LOT TAPILIBSSA (Əsas istəyimiz)
       if (lot) {
-        statusEl.textContent = `✅ LOT TAPILDI: ${lot}`;
-        dynamicButtons.innerHTML += `
-          <a class="btn bid-btn" href="https://bid.cars/en/search/archived/results?search-type=typing&query=${lot}" target="_blank">🚀 ${lot} - BID.CARS-DA AXTAR</a>
-          <a class="btn google-btn" href="https://www.google.com/search?q=${lot}" target="_blank">🔍 ${lot} - GOOGLE-DA AXTAR</a>
-        `;
-      } 
-      // Əgər Lot yoxdursa, amma VIN tapılıbsa
-      else if (vin) {
-        statusEl.textContent = `✅ VIN TAPILDI: ${vin}`;
-        dynamicButtons.innerHTML += `
-          <a class="btn bid-btn" href="https://bid.cars/en/search/archived/results?search-type=typing&query=${vin}" target="_blank">🚀 ${vin} - BID.CARS-DA AXTAR</a>
-          <a class="btn google-btn" href="https://www.google.com/search?q=${vin}" target="_blank">🔍 ${vin} - GOOGLE-DA AXTAR</a>
-        `;
+        renderActionButtons(lot, 'LOT');
+      } else if (vin) {
+        renderActionButtons(vin, 'VIN');
       }
-
-      dynamicButtons.style.display = 'flex';
 
     } else {
       statusEl.textContent = '❌ Nə Lot nömrəsi, nə də VIN tapılmadı. Yenidən çəkin.';
