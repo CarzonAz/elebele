@@ -18,7 +18,6 @@
     object-fit: cover; display: block; background: #000;
   }
   
-  /* Böyük Və Geniş Çərçivə (AFT BİRKALARI ÜÇÜN) */
   #targetFrame {
     position: absolute;
     border: 2px dashed #ffca28;
@@ -43,25 +42,27 @@
   #panel {
     position: absolute; left: 0; right: 0; bottom: 0;
     padding: 16px 18px calc(22px + env(safe-area-inset-bottom));
-    background: linear-gradient(180deg, rgba(0,0,0,0) 0%, #000 40%);
+    background: linear-gradient(180deg, rgba(0,0,0,0) 0%, #000 80%);
     display: flex; flex-direction: column; align-items: center; gap: 10px; z-index: 5;
   }
   #status { font-size: 14px; color: #ffecb3; text-align: center; font-weight: 600; }
 
   #codeInput {
-    width: 100%; max-width: 420px; font-size: 24px; font-weight: 800; text-align: center;
-    color: #00ff9d; background: rgba(0,0,0,0.6); border: 2px solid #00ff9d;
-    border-radius: 12px; padding: 10px; letter-spacing: 2px; outline: none;
+    width: 100%; max-width: 420px; font-size: 26px; font-weight: 800; text-align: center;
+    color: #00ff9d; background: rgba(0,0,0,0.7); border: 2px solid #00ff9d;
+    border-radius: 12px; padding: 12px; letter-spacing: 3px; outline: none;
   }
 
   #actionBtn {
-    display: none; width: 100%; max-width: 420px; padding: 16px 10px;
+    width: 100%; max-width: 420px; padding: 16px 10px;
     font-size: 18px; font-weight: 800; color: #000; background: #ffca28;
     border: none; border-radius: 14px; text-decoration: none; text-align: center;
     box-shadow: 0 4px 20px rgba(255,202,40,0.4); cursor: pointer;
+    display: block; transition: opacity 0.2s, transform 0.1s;
   }
-  #actionBtn.show { display: block; animation: pop 0.2s ease; }
-  @keyframes pop { from { transform: scale(0.9); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+  #actionBtn.disabled {
+    opacity: 0.5; pointer-events: none; background: #666; box-shadow: none; color: #ccc;
+  }
 
   .controls { display: flex; gap: 10px; width: 100%; max-width: 420px; }
   .ctrl-btn {
@@ -92,21 +93,20 @@
   <div id="targetFrame"></div>
   <div id="scanLine"></div>
 
-  <div id="topbar">📷 Lot kağızını çərçivəyə yönəldin</div>
+  <div id="topbar">📷 Lot kağızını çərçivəyə tutun (Saniyədə 1 dəfə oxunur)</div>
 
   <div id="panel">
     <div id="status">Kamera hazırlanır...</div>
-    <input type="text" id="codeInput" placeholder="Skan edilir..." autocomplete="off">
-    <a id="actionBtn" href="#" target="_blank" rel="noopener">Bid.cars-da Axtar 🚀</a>
+    <input type="text" id="codeInput" placeholder="--------" maxlength="8" autocomplete="off">
+    <a id="actionBtn" class="disabled" href="#" target="_blank" rel="noopener">Bid.cars-da Axtar 🚀</a>
     <div class="controls">
       <button id="torchBtn" class="ctrl-btn" style="display:none;">Fənər 🔦</button>
-      <button id="resetBtn" class="ctrl-btn" style="display:none;">Yenidən Skan Et</button>
     </div>
   </div>
 
   <div id="startOverlay">
     <h1>Bid.cars Lot Scanner</h1>
-    <p>Gömrük həyətindəki maşınların Lot nömrələrini (məs: 42095834X) oxutmaq üçün başlayın.</p>
+    <p>Gömrük həyətindəki maşınların 8 rəqəmli Lot nömrələrini oxutmaq üçün başlayın.</p>
     <button id="startBtn">Kameranı Aç</button>
   </div>
 </div>
@@ -119,7 +119,6 @@
   const statusEl = document.getElementById('status');
   const codeInput = document.getElementById('codeInput');
   const actionBtn = document.getElementById('actionBtn');
-  const resetBtn = document.getElementById('resetBtn');
   const torchBtn = document.getElementById('torchBtn');
   const startOverlay = document.getElementById('startOverlay');
   const startBtn = document.getElementById('startBtn');
@@ -127,16 +126,13 @@
   let worker = null;
   let scanning = false;
   let busy = false;
-  let found = false;
-  let scanTimer = null;
   let videoTrack = null;
   let torchOn = false;
 
-  // Frame ölçüsü: Şəkildəki kimi enli kağızlar üçün uyğunlaşdırılıb
   function layoutFrame() {
     const w = window.innerWidth, h = window.innerHeight;
     const frameW = Math.min(w * 0.90, 560);
-    const frameH = frameW * 0.45; // Enli düzbucaqlı
+    const frameH = frameW * 0.45;
     const left = (w - frameW) / 2, top = (h - frameH) / 2 - 30;
     targetFrame.style.width = frameW + 'px';
     targetFrame.style.height = frameH + 'px';
@@ -152,7 +148,7 @@
     const stream = await navigator.mediaDevices.getUserMedia({
       video: {
         facingMode: { ideal: 'environment' },
-        width: { ideal: 1920 }, // Yüksək keyfiyyət
+        width: { ideal: 1920 },
         height: { ideal: 1080 }
       },
       audio: false
@@ -171,8 +167,7 @@
     await videoTrack.applyConstraints({ advanced: [{ torch: torchOn }] });
   });
 
-  // Şəkildəki kimi çəp/meyilli kağızları oxumaq üçün geniş bucaqlar
-  const ANGLES = [0, -15, 15, -30, 30];
+  const ANGLES = [0, -15, 15];
 
   function getFrameCanvas() {
     const vw = video.videoWidth, vh = video.videoHeight;
@@ -196,6 +191,7 @@
   }
 
   function processRotation(rawCanvas, angle) {
+    if (angle === 0) return rawCanvas;
     const w = rawCanvas.width, h = rawCanvas.height;
     const canvas = document.createElement('canvas');
     canvas.width = w; canvas.height = h;
@@ -209,33 +205,26 @@
   async function initWorker() {
     worker = await Tesseract.createWorker('eng', 1, { logger: () => {} });
     await worker.setParameters({
-      // 0-9 rəqəmləri və X/x hərfi
-      tessedit_char_whitelist: '0123456789xX',
+      tessedit_char_whitelist: '0123456789', // Yalnızca rəqəmlər oxunur
       tessedit_pageseg_mode: Tesseract.PSM.SPARSE_TEXT
     });
   }
 
-  // REGEX: Şəkildəki kimi 8 rəqəm + istəyə bağlı sonda "X" hərfi (Məs: 42095834 və ya 42095834X)
-  const LOT_PATTERN = /\b\d{7,8}[xX]?\b/;
-
+  // DƏQİQ 8 RƏQƏMİ TAPIR (Hərfi təmizləyir)
   function extractLotCode(text) {
     if (!text) return null;
-    const cleanText = text.replace(/[\r\n]+/g, ' ');
-    const match = cleanText.match(LOT_PATTERN);
-    if (match) {
-      return match[0].toUpperCase();
-    }
-    return null;
+    const digitsOnly = text.replace(/\D/g, ' '); // Rəqəm olmayan hər şeyi boşluq et
+    const match = digitsOnly.match(/\b\d{8}\b/); // Dəqiq 8 rəqəmli bloku tap
+    return match ? match[0] : null;
   }
 
   async function scanLoop() {
-    if (!scanning || found || busy) return;
+    if (!scanning || busy) return;
     busy = true;
     try {
       const rawCanvas = getFrameCanvas();
       if (rawCanvas) {
         for (const angle of ANGLES) {
-          if (found) break;
           const rotated = processRotation(rawCanvas, angle);
           const result = await worker.recognize(rotated);
           const code = extractLotCode(result.data.text);
@@ -252,43 +241,35 @@
 
   function startScanning() {
     scanning = true;
-    statusEl.textContent = 'Skan edilir... Kağızı çərçivədə saxlayın';
-    scanTimer = setInterval(scanLoop, 400);
+    statusEl.textContent = 'Skan edilir... Kağızı çərçivədə tutun';
+    // Saniyədə 1 dəfə oxuyur (1000 ms)
+    setInterval(scanLoop, 1000);
   }
 
   function handleFound(code) {
-    found = true;
-    clearInterval(scanTimer);
     targetFrame.classList.add('found');
-    statusEl.textContent = '✅ LOT TAPILDI!';
+    statusEl.textContent = '✅ 8 Rəqəmli Lot Tapıldı! Yoxlayın:';
     codeInput.value = code;
-
     updateUrl(code);
-    actionBtn.classList.add('show');
-    resetBtn.style.display = 'block';
 
-    // Tapılan kimi 0.8 san sonra avtomatik keçid edir
     setTimeout(() => {
-      window.location.href = actionBtn.href;
+      targetFrame.classList.remove('found');
     }, 800);
   }
 
   function updateUrl(code) {
-    actionBtn.href = `https://bid.cars/en/search/archived/results?search-type=typing&query=${encodeURIComponent(code)}`;
+    const cleanCode = code.replace(/\D/g, ''); // Təhlükəsizlik üçün yalnız rəqəm
+    if (cleanCode.length === 8) {
+      actionBtn.href = `https://bid.cars/en/search/archived/results?search-type=typing&query=${cleanCode}`;
+      actionBtn.classList.remove('disabled');
+    } else {
+      actionBtn.classList.add('disabled');
+    }
   }
 
+  // İstifadəçi əllə dəyişə bilsin
   codeInput.addEventListener('input', () => {
-    const val = codeInput.value.trim();
-    if (val) updateUrl(val);
-  });
-
-  resetBtn.addEventListener('click', () => {
-    found = false;
-    targetFrame.classList.remove('found');
-    codeInput.value = '';
-    actionBtn.classList.remove('show');
-    resetBtn.style.display = 'none';
-    startScanning();
+    updateUrl(codeInput.value.trim());
   });
 
   startBtn.addEventListener('click', async () => {
