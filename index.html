@@ -827,11 +827,20 @@ async function initCustomerPanelById(carId) {
     const dateStr = `${String(today.getDate()).padStart(2,'0')}.${String(today.getMonth()+1).padStart(2,'0')}.${today.getFullYear()}`;
 
     custData = {
-      n:  car.owner  || '',
-      m:  car.model  || '',
-      v:  car.vin    || '',
-      s:  car.status || '',
-      t:  dateStr,
+      n:           car.owner        || '',
+      m:           car.model        || '',
+      v:           car.vin          || '',
+      s:           car.status       || '',
+      t:           dateStr,
+      udus:        car.udus         || '',
+      anbar:       car.anbar        || '',
+      poti:        car.poti         || '',
+      baki:        car.baki         || '',
+      etibarname:  !!car.etibarname,
+      shippingPaid:!!car.shippingPaid,
+      location:    car.location     || '',
+      shippingPort:car.shippingPort  || '',
+      container:   car.container    || '',
       ph: {
         pikap:     (ph.pikap     || []).map(p => typeof p === 'string' ? p : p.url),
         anbar:     (ph.anbar     || []).map(p => typeof p === 'string' ? p : p.url),
@@ -858,24 +867,85 @@ async function initCustomerPanelById(carId) {
 function renderCustomerHeader() {
   const d = custData;
   const statusColors = {
-    'Auksionda':'bg-amber-100 text-amber-800 border-amber-200',
-    'Anbara gedir':'bg-yellow-100 text-yellow-800 border-yellow-200',
-    'Anbarda':'bg-blue-100 text-blue-800 border-blue-200',
-    'Gəmidə':'bg-indigo-100 text-indigo-800 border-indigo-200',
-    'Potidədir':'bg-purple-100 text-purple-800 border-purple-200',
-    'Bakıdadır':'bg-emerald-100 text-emerald-800 border-emerald-200',
+    'Auksionda':    'bg-amber-100 text-amber-800 border-amber-200',
+    'Anbara gedir': 'bg-yellow-100 text-yellow-800 border-yellow-200',
+    'Anbarda':      'bg-blue-100 text-blue-800 border-blue-200',
+    'Gəmidə':       'bg-indigo-100 text-indigo-800 border-indigo-200',
+    'Potidədir':    'bg-purple-100 text-purple-800 border-purple-200',
+    'Bakıdadır':    'bg-emerald-100 text-emerald-800 border-emerald-200',
   };
   const sc = statusColors[d.s] || 'bg-slate-100 text-slate-700 border-slate-200';
+
+  /* Logistika addımları — hansı addım "keçilmiş" sayılır */
+  const steps = [
+    { label: 'Uduş (Auksion)',   icon: '🏷️',  date: d.udus,  done: !!d.udus },
+    { label: 'Anbara Giriş',     icon: '🏭',  date: d.anbar, done: !!d.anbar },
+    { label: 'Poti Çatdırılma',  icon: '🇬🇪',  date: d.poti,  done: !!d.poti },
+    { label: 'Bakı Çatdırılma',  icon: '🇦🇿',  date: d.baki,  done: !!d.baki },
+  ];
+
+  /* Current active step index */
+  let activeStep = 0;
+  steps.forEach((s,i) => { if (s.done) activeStep = i + 1; });
+
+  const stepsHtml = steps.map((s, i) => {
+    const past   = i < activeStep;
+    const active = i === activeStep - 1;
+    const future = i >= activeStep;
+    return `
+      <div class="flex items-center gap-3 py-2.5 ${i < steps.length-1 ? 'border-b border-slate-100' : ''}">
+        <div class="w-8 h-8 flex items-center justify-center rounded-full shrink-0 text-base
+          ${past   ? 'bg-emerald-100 text-emerald-700 border-2 border-emerald-300' :
+            active ? 'bg-indigo-100 text-indigo-700 border-2 border-indigo-400 shadow-sm' :
+                     'bg-slate-100 text-slate-400 border-2 border-slate-200'}">
+          ${past ? '✅' : s.icon}
+        </div>
+        <div class="flex-1 min-w-0">
+          <span class="text-xs font-bold ${past ? 'text-emerald-800' : active ? 'text-indigo-900 font-extrabold' : 'text-slate-400'} block leading-tight">${s.label}</span>
+          ${s.date
+            ? `<span class="text-[11px] font-mono font-bold ${past ? 'text-emerald-600' : 'text-indigo-600'}">${s.date}</span>`
+            : `<span class="text-[11px] text-slate-400 italic">${future ? 'Hələ baş verməyib' : 'Gözlənilir...'}</span>`}
+        </div>
+        ${active ? `<span class="text-[10px] font-black bg-indigo-600 text-white px-2 py-0.5 rounded-full shrink-0">CARİ</span>` : ''}
+      </div>`;
+  }).join('');
+
   document.getElementById('cust-car-header').innerHTML = `
-    <div class="flex items-start justify-between gap-3">
+    <!-- Car Title + Status -->
+    <div class="flex items-start justify-between gap-3 pb-3 border-b border-slate-100">
       <div>
-        <h2 class="text-lg font-black text-slate-900 leading-tight">${d.m || 'Avtomobil'}</h2>
-        <p class="text-xs font-semibold text-slate-500 mt-0.5">👤 ${d.n || 'Müştəri'}</p>
+        <h2 class="text-base font-black text-slate-900 leading-tight">${d.m || 'Avtomobil'}</h2>
+        <p class="text-xs font-semibold text-slate-600 mt-0.5">👤 ${d.n || 'Müştəri'}</p>
         ${d.v ? `<p class="text-[11px] font-mono text-slate-400 mt-0.5">VIN: ${d.v}</p>` : ''}
       </div>
       <span class="text-[11px] font-bold px-3 py-1.5 rounded-full border shrink-0 ${sc}">${d.s || '-'}</span>
     </div>
-    ${d.t ? `<p class="text-[11px] text-slate-400 font-medium pt-1">📅 Yüklənmə Tarixi: ${d.t}</p>` : ''}
+
+    <!-- Location & Port (if available) -->
+    ${(d.location || d.shippingPort || d.container) ? `
+    <div class="flex flex-wrap gap-2 py-2.5 border-b border-slate-100">
+      ${d.location    ? `<span class="text-[11px] font-semibold bg-amber-50 border border-amber-200 text-amber-800 px-2.5 py-1 rounded-lg">📍 ${d.location}</span>` : ''}
+      ${d.shippingPort? `<span class="text-[11px] font-semibold bg-blue-50 border border-blue-200 text-blue-800 px-2.5 py-1 rounded-lg">⚓ ${d.shippingPort}</span>` : ''}
+      ${d.container   ? `<span class="text-[11px] font-mono font-bold bg-slate-100 border border-slate-200 text-slate-800 px-2.5 py-1 rounded-lg">📦 ${d.container}</span>` : ''}
+    </div>` : ''}
+
+    <!-- Logistics Timeline -->
+    <div class="py-1">
+      <p class="text-[10px] font-extrabold uppercase tracking-widest text-slate-400 mb-1 px-1">Logistika Mərhələləri</p>
+      ${stepsHtml}
+    </div>
+
+    <!-- Etibarname & Shipping Paid -->
+    <div class="flex gap-2 flex-wrap pt-2.5 border-t border-slate-100">
+      <span class="flex items-center gap-1.5 text-[11px] font-bold px-3 py-1.5 rounded-xl border
+        ${d.etibarname ? 'bg-emerald-50 text-emerald-800 border-emerald-200' : 'bg-rose-50 text-rose-700 border-rose-200'}">
+        ${d.etibarname ? '📜 Etibarnamə Verilib' : '⚠️ Etibarnamə Hazır Deyil'}
+      </span>
+      <span class="flex items-center gap-1.5 text-[11px] font-bold px-3 py-1.5 rounded-xl border
+        ${d.shippingPaid ? 'bg-emerald-50 text-emerald-800 border-emerald-200' : 'bg-amber-50 text-amber-800 border-amber-200'}">
+        ${d.shippingPaid ? '💵 Yol Pulu Ödənilib' : '⏳ Yol Pulu Gözlənilir'}
+      </span>
+    </div>
   `;
 }
 
@@ -947,12 +1017,19 @@ function openLightbox(index) {
 }
 
 function closeLightbox() {
+  adminLbPhotos = [];          // admin lightbox-u sıfırla
   document.getElementById('lightbox').classList.add('hidden');
   document.body.style.overflow = '';
 }
 
-function lbNext() { lbIndex = (lbIndex + 1) % lbPhotos.length; renderLightbox(); }
-function lbPrev() { lbIndex = (lbIndex - 1 + lbPhotos.length) % lbPhotos.length; renderLightbox(); }
+function lbNext() {
+  if (adminLbPhotos.length) { adminLbIdx = (adminLbIdx + 1) % adminLbPhotos.length; renderAdminLightbox(); return; }
+  lbIndex = (lbIndex + 1) % lbPhotos.length; renderLightbox();
+}
+function lbPrev() {
+  if (adminLbPhotos.length) { adminLbIdx = (adminLbIdx - 1 + adminLbPhotos.length) % adminLbPhotos.length; renderAdminLightbox(); return; }
+  lbIndex = (lbIndex - 1 + lbPhotos.length) % lbPhotos.length; renderLightbox();
+}
 
 function renderLightbox() {
   document.getElementById('lb-img').src    = lbPhotos[lbIndex];
@@ -2074,6 +2151,79 @@ function getPhotoStatusHtml(car) {
   }).join('');
 }
 
+/* ====
+   ADMIN CARD — inline photo gallery (müştəri üslubu)
+   ==== */
+let adminLbPhotos = [], adminLbIdx = 0;
+
+function renderAdminCardPhotos(c) {
+  const ph = c.photos || {};
+  const cats = [
+    { key: 'pikap',     label: '📦 Pikap',     color: 'text-indigo-700' },
+    { key: 'anbar',     label: '🏭 Anbar',      color: 'text-blue-700'   },
+    { key: 'sonTehvil', label: '🚗 Son Təhvil', color: 'text-purple-700' },
+  ];
+  const hasAny = cats.some(ct => (ph[ct.key] || []).length > 0);
+  if (!hasAny) return `
+    <div class="bg-slate-50 border border-slate-100 rounded-xl px-3 py-2 flex items-center gap-2 text-xs text-slate-400">
+      <i class="fa-regular fa-image"></i> Hələ şəkil yüklənməyib
+    </div>`;
+
+  let html = `<div class="space-y-2.5">`;
+  cats.forEach(ct => {
+    const photos = (ph[ct.key] || []).map(p => typeof p === 'string' ? p : p.url);
+    if (!photos.length) return;
+    const urlsJson = JSON.stringify(photos);
+    html += `
+      <div>
+        <p class="text-[10px] font-extrabold uppercase ${ct.color} mb-1.5">${ct.label} <span class="font-semibold text-slate-400">(${photos.length})</span></p>
+        <div class="grid grid-cols-4 gap-1.5">
+          ${photos.slice(0, 7).map((url, idx) => `
+            <div class="relative aspect-square rounded-xl overflow-hidden border border-slate-200 cursor-pointer group"
+                 onclick="openAdminLightbox(${idx}, ${urlsJson.replace(/'/g,"\\'")})" >
+              <img src="${url}" alt="" class="w-full h-full object-cover group-hover:scale-105 transition duration-200"
+                   onerror="this.parentElement.style.display='none'">
+              <div class="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition flex items-center justify-center">
+                <i class="fa-solid fa-expand text-white opacity-0 group-hover:opacity-100 text-sm transition"></i>
+              </div>
+            </div>`).join('')}
+          ${photos.length > 7 ? `
+            <div class="aspect-square rounded-xl bg-slate-200 border border-slate-300 flex items-center justify-center cursor-pointer hover:bg-slate-300 transition"
+                 onclick="openPhotoModal(${c.id})">
+              <div class="text-center">
+                <span class="block text-sm font-black text-slate-600">+${photos.length - 7}</span>
+                <span class="text-[9px] text-slate-500">daha</span>
+              </div>
+            </div>` : ''}
+        </div>
+      </div>`;
+  });
+  html += `</div>`;
+  return html;
+}
+
+function openAdminLightbox(startIdx, photos) {
+  adminLbPhotos = photos;
+  adminLbIdx    = startIdx;
+  /* Reuse the customer lightbox element */
+  document.getElementById('lightbox').classList.remove('hidden');
+  document.body.style.overflow = 'hidden';
+  renderAdminLightbox();
+}
+
+function renderAdminLightbox() {
+  document.getElementById('lb-img').src = adminLbPhotos[adminLbIdx];
+  document.getElementById('lb-counter').textContent = `${adminLbIdx + 1} / ${adminLbPhotos.length}`;
+  const dotsEl = document.getElementById('lb-dots');
+  dotsEl.innerHTML = adminLbPhotos.map((_, i) =>
+    `<span onclick="adminLbGoTo(${i})" class="w-2 h-2 rounded-full cursor-pointer transition ${i === adminLbIdx ? 'bg-white scale-125' : 'bg-white/40 hover:bg-white/70'}"></span>`
+  ).join('');
+  document.querySelectorAll('#lightbox button[onclick="lbPrev()"], #lightbox button[onclick="lbNext()"]')
+    .forEach(b => b.style.display = adminLbPhotos.length <= 1 ? 'none' : '');
+}
+
+function adminLbGoTo(i) { adminLbIdx = i; renderAdminLightbox(); }
+
 function renderCardGrid(cont, fc) {
   let html = `<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">`;
   fc.forEach(c => {
@@ -2106,11 +2256,8 @@ function renderCardGrid(cont, fc) {
               ${c.link?`<a href="${c.link}" target="_blank" class="text-xs text-blue-600 hover:text-blue-800 p-1"><i class="fa-solid fa-arrow-up-right-from-square"></i></a>`:''}
             </div>
 
-            <!-- Photo Status -->
-            <div class="bg-slate-50 border border-slate-100 rounded-xl px-3 py-2 flex items-center gap-3">
-              <span class="text-[10px] font-bold text-slate-400 uppercase shrink-0">Şəkillər:</span>
-              <div class="flex items-center gap-2">${getPhotoStatusHtml(c)}</div>
-            </div>
+            <!-- Photo Gallery (admin card) -->
+            ${renderAdminCardPhotos(c)}
 
             <div class="bg-slate-50 p-3 rounded-2xl border border-slate-100 space-y-2 text-xs">
               <div class="flex items-center justify-between text-slate-700 font-medium">
