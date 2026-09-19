@@ -57,7 +57,7 @@ body{font-family:'Plus Jakarta Sans',sans-serif;background:#f1f5f9;color:#0f172a
   <span id="toast-msg" class="text-sm font-medium leading-snug"></span>
 </div>
 
-<!-- ===================== CUSTOMER PANEL (?data= URL) ===================== -->
+<!-- ===================== CUSTOMER PANEL (?t= URL) ===================== -->
 <div id="customer-panel" class="hidden min-h-screen bg-slate-50">
 
   <!-- Customer Header -->
@@ -301,7 +301,7 @@ body{font-family:'Plus Jakarta Sans',sans-serif;background:#f1f5f9;color:#0f172a
       <div class="bg-slate-100 border border-slate-200 p-1 rounded-2xl flex gap-1">
         <button id="ptab-pikap" onclick="setPhotoTab('pikap')" class="flex-1 py-2 px-2 rounded-xl text-xs font-bold transition bg-white text-indigo-700 shadow-sm">📦 Pikap</button>
         <button id="ptab-anbar" onclick="setPhotoTab('anbar')" class="flex-1 py-2 px-2 rounded-xl text-xs font-bold transition text-slate-600 hover:bg-white/60">🏭 Anbar</button>
-        <button id="ptab-sonTehvil" onclick="setPhotoTab('sonTehvil')" class="flex-1 py-2 px-2 rounded-xl text-xs font-bold transition text-slate-600 hover:bg-white/60">🚗 Son Təhvil</button>
+        <button id="ptab-poti"  onclick="setPhotoTab('poti')"  class="flex-1 py-2 px-2 rounded-xl text-xs font-bold transition text-slate-600 hover:bg-white/60">🇬🇪 Poti</button>
       </div>
     </div>
 
@@ -335,7 +335,7 @@ body{font-family:'Plus Jakarta Sans',sans-serif;background:#f1f5f9;color:#0f172a
       </button>
     </div>
     <div class="bg-indigo-50 border border-indigo-100 p-3 rounded-2xl text-xs text-indigo-800 font-medium leading-relaxed">
-      💡 <strong>Bu linki WhatsApp, SMS və ya e-mail ilə müştəriyə göndərin.</strong> Müştəri linki açdıqda şəkillər kateqoriyalara görə avtomatik göstərilir və ZIP yükləyə bilər.
+      💡 <strong>Bu linki WhatsApp, SMS və ya e-mail ilə müştəriyə göndərin.</strong> Link unikal və təhlükəsiz koddan ibarətdir, başqa heç kim bu linki təxmin edə bilməz.
     </div>
     <div class="flex gap-2">
       <button onclick="shareViaWhatsApp()" class="flex-1 py-2.5 bg-[#25D366] hover:bg-[#1ebe58] text-white rounded-xl text-xs font-bold flex items-center justify-center gap-2 transition">
@@ -501,7 +501,7 @@ body{font-family:'Plus Jakarta Sans',sans-serif;background:#f1f5f9;color:#0f172a
         </div>
         <div>
           <label class="block text-xs font-semibold text-slate-600 mb-1">Şəkil URL (Əsas Şəkil)</label>
-          <input type="text" id="form-image-url" placeholder="https://notionalmachines.github.io/assets/images/nm/CallsAsSequenceDiagram.jpg" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-sm text-slate-900 focus:outline-none focus:border-red-500">
+          <input type="text" id="form-image-url" placeholder="https://..." class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-sm text-slate-900 focus:outline-none focus:border-red-500">
         </div>
       </div>
 
@@ -694,21 +694,33 @@ let lbPhotos     = [];
 let lbIndex      = 0;
 let lbTouchStart = 0;
 
+/* Admin lightbox state */
+let adminLbPhotos = [], adminLbIdx = 0;
+
+/* ============================
+   SHARE TOKEN UTIL
+   ============================ */
+function generateShareToken() {
+  const arr = new Uint8Array(16);
+  crypto.getRandomValues(arr);
+  return Array.from(arr, b => b.toString(16).padStart(2,'0')).join('');
+}
+
 /* ============================
    INIT
    ============================ */
 window.addEventListener('DOMContentLoaded', async () => {
-  const params    = new URLSearchParams(window.location.search);
-  const dataParam = params.get('data');
-  const idParam   = params.get('id');
+  const params     = new URLSearchParams(window.location.search);
+  const dataParam  = params.get('data');
+  const tokenParam = params.get('t');
 
-  if (dataParam || idParam) {
+  if (dataParam || tokenParam) {
     document.getElementById('admin-panel').classList.add('hidden');
     document.getElementById('customer-panel').classList.remove('hidden');
     if (dataParam) {
       initCustomerPanel(dataParam);
     } else {
-      await initCustomerPanelById(parseInt(idParam));
+      await initCustomerPanelByToken(tokenParam);
     }
     return;
   }
@@ -765,7 +777,7 @@ window.addEventListener('DOMContentLoaded', async () => {
 });
 
 /* ============================
-   CUSTOMER PANEL
+   CUSTOMER PANEL — base64 data (?data=)
    ============================ */
 function initCustomerPanel(base64) {
   try {
@@ -788,11 +800,10 @@ function initCustomerPanel(base64) {
   renderCustomerPhotos();
 }
 
-/* ====
-   CUSTOMER PANEL – ID-based (fetches live from JSONBin)
-   ==== */
-async function initCustomerPanelById(carId) {
-  /* Show loading skeleton */
+/* ============================
+   CUSTOMER PANEL — token ilə (?t=)
+   ============================ */
+async function initCustomerPanelByToken(token) {
   document.getElementById('cust-car-header').innerHTML = `
     <div class="flex items-center gap-3 py-2">
       <i class="fa-solid fa-spinner fa-spin text-indigo-600 text-lg"></i>
@@ -808,7 +819,7 @@ async function initCustomerPanelById(carId) {
     if (!r.ok) throw new Error(`Şəbəkə xətası: ${r.status}`);
     const result  = await r.json();
     const allCars = Array.isArray(result.record) ? result.record : [];
-    const car     = allCars.find(c => c.id === carId);
+    const car     = allCars.find(c => c.shareToken === token);
 
     if (!car) {
       document.getElementById('customer-panel').innerHTML = `
@@ -822,7 +833,7 @@ async function initCustomerPanelById(carId) {
       return;
     }
 
-    const ph      = car.photos || { pikap: [], anbar: [], sonTehvil: [] };
+    const ph      = car.photos || { pikap: [], anbar: [], poti: [] };
     const today   = new Date();
     const dateStr = `${String(today.getDate()).padStart(2,'0')}.${String(today.getMonth()+1).padStart(2,'0')}.${today.getFullYear()}`;
 
@@ -839,12 +850,12 @@ async function initCustomerPanelById(carId) {
       etibarname:  !!car.etibarname,
       shippingPaid:!!car.shippingPaid,
       location:    car.location     || '',
-      shippingPort:car.shippingPort  || '',
+      shippingPort:car.shippingPort || '',
       container:   car.container    || '',
       ph: {
-        pikap:     (ph.pikap     || []).map(p => typeof p === 'string' ? p : p.url),
-        anbar:     (ph.anbar     || []).map(p => typeof p === 'string' ? p : p.url),
-        sonTehvil: (ph.sonTehvil || []).map(p => typeof p === 'string' ? p : p.url),
+        pikap: (ph.pikap || []).map(p => typeof p === 'string' ? p : p.url),
+        anbar: (ph.anbar || []).map(p => typeof p === 'string' ? p : p.url),
+        poti:  (ph.poti  || []).map(p => typeof p === 'string' ? p : p.url),
       }
     };
 
@@ -876,7 +887,6 @@ function renderCustomerHeader() {
   };
   const sc = statusColors[d.s] || 'bg-slate-100 text-slate-700 border-slate-200';
 
-  /* Logistika addımları — hansı addım "keçilmiş" sayılır */
   const steps = [
     { label: 'Uduş (Auksion)',   icon: '🏷️',  date: d.udus,  done: !!d.udus },
     { label: 'Anbara Giriş',     icon: '🏭',  date: d.anbar, done: !!d.anbar },
@@ -884,7 +894,6 @@ function renderCustomerHeader() {
     { label: 'Bakı Çatdırılma',  icon: '🇦🇿',  date: d.baki,  done: !!d.baki },
   ];
 
-  /* Current active step index */
   let activeStep = 0;
   steps.forEach((s,i) => { if (s.done) activeStep = i + 1; });
 
@@ -911,7 +920,6 @@ function renderCustomerHeader() {
   }).join('');
 
   document.getElementById('cust-car-header').innerHTML = `
-    <!-- Car Title + Status -->
     <div class="flex items-start justify-between gap-3 pb-3 border-b border-slate-100">
       <div>
         <h2 class="text-base font-black text-slate-900 leading-tight">${d.m || 'Avtomobil'}</h2>
@@ -921,7 +929,6 @@ function renderCustomerHeader() {
       <span class="text-[11px] font-bold px-3 py-1.5 rounded-full border shrink-0 ${sc}">${d.s || '-'}</span>
     </div>
 
-    <!-- Location & Port (if available) -->
     ${(d.location || d.shippingPort || d.container) ? `
     <div class="flex flex-wrap gap-2 py-2.5 border-b border-slate-100">
       ${d.location    ? `<span class="text-[11px] font-semibold bg-amber-50 border border-amber-200 text-amber-800 px-2.5 py-1 rounded-lg">📍 ${d.location}</span>` : ''}
@@ -929,13 +936,11 @@ function renderCustomerHeader() {
       ${d.container   ? `<span class="text-[11px] font-mono font-bold bg-slate-100 border border-slate-200 text-slate-800 px-2.5 py-1 rounded-lg">📦 ${d.container}</span>` : ''}
     </div>` : ''}
 
-    <!-- Logistics Timeline -->
     <div class="py-1">
       <p class="text-[10px] font-extrabold uppercase tracking-widest text-slate-400 mb-1 px-1">Logistika Mərhələləri</p>
       ${stepsHtml}
     </div>
 
-    <!-- Etibarname & Shipping Paid -->
     <div class="flex gap-2 flex-wrap pt-2.5 border-t border-slate-100">
       <span class="flex items-center gap-1.5 text-[11px] font-bold px-3 py-1.5 rounded-xl border
         ${d.etibarname ? 'bg-emerald-50 text-emerald-800 border-emerald-200' : 'bg-rose-50 text-rose-700 border-rose-200'}">
@@ -952,9 +957,9 @@ function renderCustomerHeader() {
 function renderCustomerTabs() {
   const ph = custData.ph || {};
   const tabs = [
-    { key: 'pikap',     label: '📦 Pikap',      count: (ph.pikap || []).length },
-    { key: 'anbar',     label: '🏭 Anbar',       count: (ph.anbar || []).length },
-    { key: 'sonTehvil', label: '🚗 Son Təhvil',  count: (ph.sonTehvil || []).length },
+    { key: 'pikap', label: '📦 Pikap', count: (ph.pikap || []).length },
+    { key: 'anbar', label: '🏭 Anbar', count: (ph.anbar || []).length },
+    { key: 'poti',  label: '🇬🇪 Poti',  count: (ph.poti  || []).length },
   ];
   document.getElementById('cust-tabs').innerHTML = tabs.map(t => `
     <button onclick="setCustTab('${t.key}')" id="ctab-${t.key}"
@@ -1011,13 +1016,14 @@ function openLightbox(index) {
   const ph = custData.ph || {};
   lbPhotos = ph[custTab] || [];
   lbIndex  = index;
+  adminLbPhotos = [];   // admin rejimini sıfırla
   document.getElementById('lightbox').classList.remove('hidden');
   document.body.style.overflow = 'hidden';
   renderLightbox();
 }
 
 function closeLightbox() {
-  adminLbPhotos = [];          // admin lightbox-u sıfırla
+  adminLbPhotos = [];
   document.getElementById('lightbox').classList.add('hidden');
   document.body.style.overflow = '';
 }
@@ -1038,15 +1044,14 @@ function renderLightbox() {
   dotsEl.innerHTML = lbPhotos.map((_, i) =>
     `<span onclick="lbGoTo(${i})" class="w-2 h-2 rounded-full cursor-pointer transition ${i === lbIndex ? 'bg-white scale-125' : 'bg-white/40 hover:bg-white/70'}"></span>`
   ).join('');
-  /* Hide arrows if only 1 photo */
-  const btns = document.querySelectorAll('#lightbox button[onclick="lbPrev()"], #lightbox button[onclick="lbNext()"]');
-  btns.forEach(b => b.style.display = lbPhotos.length <= 1 ? 'none' : '');
+  document.querySelectorAll('#lightbox button[onclick="lbPrev()"], #lightbox button[onclick="lbNext()"]')
+    .forEach(b => b.style.display = lbPhotos.length <= 1 ? 'none' : '');
 }
 
 function lbGoTo(i) { lbIndex = i; renderLightbox(); }
 
 async function lbDownloadCurrent() {
-  const url = lbPhotos[lbIndex];
+  const url = adminLbPhotos.length ? adminLbPhotos[adminLbIdx] : lbPhotos[lbIndex];
   if (!url) return;
   try {
     const resp = await fetch(url, { mode: 'cors' });
@@ -1054,7 +1059,7 @@ async function lbDownloadCurrent() {
     const blob = await resp.blob();
     const a = document.createElement('a');
     a.href = URL.createObjectURL(blob);
-    a.download = `photo_${lbIndex+1}.jpg`;
+    a.download = `photo_${(adminLbPhotos.length ? adminLbIdx : lbIndex)+1}.jpg`;
     a.click();
     URL.revokeObjectURL(a.href);
     showToast('Şəkil yükləndi!', 'success');
@@ -1081,7 +1086,7 @@ async function custDownloadAllZip() {
 async function downloadPhotosAsZip(photosByCategory, baseName) {
   showToast('ZIP hazırlanır, zəhmət olmasa gözləyin...', 'info');
   const zip = new JSZip();
-  const catNames = { pikap: 'Pikap', anbar: 'Anbar', sonTehvil: 'Son-Tehvil' };
+  const catNames = { pikap: 'Pikap', anbar: 'Anbar', poti: 'Poti' };
   let total = 0;
 
   for (const [cat, urls] of Object.entries(photosByCategory)) {
@@ -1126,7 +1131,7 @@ function closePhotoModal() {
 
 function setPhotoTab(tab) {
   currentPhotoTab = tab;
-  ['pikap','anbar','sonTehvil'].forEach(t => {
+  ['pikap','anbar','poti'].forEach(t => {
     const btn = document.getElementById(`ptab-${t}`);
     if (!btn) return;
     if (t === tab) {
@@ -1140,16 +1145,16 @@ function setPhotoTab(tab) {
 
 function getCarPhotos(carId) {
   const car = cars.find(c => c.id === carId);
-  if (!car) return { pikap: [], anbar: [], sonTehvil: [] };
-  return car.photos || { pikap: [], anbar: [], sonTehvil: [] };
+  if (!car) return { pikap: [], anbar: [], poti: [] };
+  return car.photos || { pikap: [], anbar: [], poti: [] };
 }
 
 function renderPhotoStatusRow(car) {
   const ph = car.photos || {};
   const cats = [
-    { key: 'pikap',     label: 'Pikap',      icon: '📦' },
-    { key: 'anbar',     label: 'Anbar',       icon: '🏭' },
-    { key: 'sonTehvil', label: 'Son Təhvil',  icon: '🚗' },
+    { key: 'pikap', label: 'Pikap', icon: '📦' },
+    { key: 'anbar', label: 'Anbar', icon: '🏭' },
+    { key: 'poti',  label: 'Poti',  icon: '🇬🇪' },
   ];
   document.getElementById('photo-status-row').innerHTML = `
     <div class="flex flex-wrap gap-2 pb-1">
@@ -1169,7 +1174,7 @@ function renderPhotoTabContent() {
   const ph = car.photos || {};
   const photos = ph[currentPhotoTab] || [];
   const tabContent = document.getElementById('photo-tab-content');
-  const catLabel = { pikap: 'Pikap', anbar: 'Anbar', sonTehvil: 'Son Təhvil' }[currentPhotoTab];
+  const catLabel = { pikap: 'Pikap', anbar: 'Anbar', poti: 'Poti' }[currentPhotoTab];
 
   tabContent.innerHTML = `
     <!-- Upload Zone -->
@@ -1219,7 +1224,6 @@ function renderPhotoTabContent() {
     </div>` : ''}
   `;
 
-  /* Drag & Drop */
   const dz = document.getElementById('drop-zone');
   if (dz) {
     dz.addEventListener('dragover', e => { e.preventDefault(); dz.classList.add('drag-over'); });
@@ -1240,7 +1244,7 @@ async function handlePhotoFileSelect(files) {
 
   const car = cars.find(c => c.id === currentPhotoCarId);
   if (!car) return;
-  if (!car.photos) car.photos = { pikap: [], anbar: [], sonTehvil: [] };
+  if (!car.photos) car.photos = { pikap: [], anbar: [], poti: [] };
   if (!car.photos[currentPhotoTab]) car.photos[currentPhotoTab] = [];
 
   let uploaded = 0;
@@ -1297,19 +1301,22 @@ async function deleteAdminPhoto(index) {
 }
 
 /* ============================
-   CUSTOMER LINK GENERATION
+   CUSTOMER LINK GENERATION (shareToken)
    ============================ */
 function openLinkModal(carId) {
   const car = cars.find(c => c.id === carId);
   if (!car) return;
 
-  /* Generate a clean short link using ?id= so the customer panel fetches
-     live data from JSONBin instead of embedding all photo URLs in the URL */
-  const link = `${window.location.origin}${window.location.pathname}?id=${carId}`;
+  if (!car.shareToken) car.shareToken = generateShareToken();
+
+  const link = `${window.location.origin}${window.location.pathname}?t=${car.shareToken}`;
 
   document.getElementById('link-output').value = link;
   document.getElementById('linkModal').classList.remove('hidden');
   closePhotoModal();
+
+  /* Tokeni cloud-a yaz (əgər təzə yaranıbsa) */
+  saveDataToCloud(cars);
 }
 
 function closeLinkModal() {
@@ -1356,8 +1363,10 @@ async function loadDataFromCloud() {
     const result  = await r.json();
     const remote  = result && result.record ? result.record : result;
     if (Array.isArray(remote)) {
+      const needsMigration = remote.some(c => !c.shareToken);
       cars = normalizeCars(remote);
       localStorage.setItem('carzone_db', JSON.stringify(cars));
+      if (needsMigration) await saveDataToCloud(cars);
       renderApp();
       return true;
     }
@@ -1607,15 +1616,25 @@ function getDaysToPoti(potiStr) {
 
 function normalizeCars(list) {
   if (!Array.isArray(list)) return [];
-  return list.map(c => ({
-    ...c,
-    imageUrl: c.imageUrl || c.image || '',
-    udus:  formatDateDMY(c.udus)  || c.udus  || '',
-    anbar: formatDateDMY(c.anbar) || c.anbar || '',
-    poti:  formatDateDMY(c.poti)  || c.poti  || '',
-    baki:  formatDateDMY(c.baki)  || c.baki  || '',
-    photos: c.photos || { pikap: [], anbar: [], sonTehvil: [] }
-  }));
+  return list.map(c => {
+    const raw = c.photos || {};
+    /* Köhnə sxemdən miqrasiya: sonTehvil və baki artıq istifadə olunmur */
+    const photos = {
+      pikap: raw.pikap || [],
+      anbar: raw.anbar || [],
+      poti:  raw.poti  || [],
+    };
+    return {
+      ...c,
+      imageUrl: c.imageUrl || c.image || '',
+      udus:  formatDateDMY(c.udus)  || c.udus  || '',
+      anbar: formatDateDMY(c.anbar) || c.anbar || '',
+      poti:  formatDateDMY(c.poti)  || c.poti  || '',
+      baki:  formatDateDMY(c.baki)  || c.baki  || '',
+      shareToken: c.shareToken || generateShareToken(),
+      photos,
+    };
+  });
 }
 
 /* ============================
@@ -1942,7 +1961,8 @@ async function processSaveCar(id, imageUrl) {
     documents: tempAttachedDocs,
     etibarname: document.getElementById('form-etibarname').checked,
     shippingPaid: document.getElementById('form-shipping-paid').checked,
-    photos: (existing && existing.photos) || { pikap: [], anbar: [], sonTehvil: [] }
+    shareToken: (existing && existing.shareToken) || generateShareToken(),
+    photos: (existing && existing.photos) || { pikap: [], anbar: [], poti: [] }
   };
   if (id) { const i = cars.findIndex(c=>c.id===parseInt(id)); cars[i] = carData; }
   else cars.push(carData);
@@ -2139,9 +2159,9 @@ function renderCarsContainer() {
 function getPhotoStatusHtml(car) {
   const ph = car.photos || {};
   const cats = [
-    { key:'pikap',     icon:'📦', label:'Pikap' },
-    { key:'anbar',     icon:'🏭', label:'Anbar' },
-    { key:'sonTehvil', icon:'🚗', label:'Son T.' },
+    { key:'pikap', icon:'📦', label:'Pikap' },
+    { key:'anbar', icon:'🏭', label:'Anbar' },
+    { key:'poti',  icon:'🇬🇪', label:'Poti' },
   ];
   return cats.map(c => {
     const cnt = (ph[c.key]||[]).length;
@@ -2151,17 +2171,12 @@ function getPhotoStatusHtml(car) {
   }).join('');
 }
 
-/* ====
-   ADMIN CARD — inline photo gallery (müştəri üslubu)
-   ==== */
-let adminLbPhotos = [], adminLbIdx = 0;
-
 function renderAdminCardPhotos(c) {
   const ph = c.photos || {};
   const cats = [
-    { key: 'pikap',     label: '📦 Pikap',     color: 'text-indigo-700' },
-    { key: 'anbar',     label: '🏭 Anbar',      color: 'text-blue-700'   },
-    { key: 'sonTehvil', label: '🚗 Son Təhvil', color: 'text-purple-700' },
+    { key: 'pikap', label: '📦 Pikap',     color: 'text-indigo-700' },
+    { key: 'anbar', label: '🏭 Anbar',      color: 'text-blue-700'   },
+    { key: 'poti',  label: '🇬🇪 Poti',       color: 'text-amber-700'  },
   ];
   const hasAny = cats.some(ct => (ph[ct.key] || []).length > 0);
   if (!hasAny) return `
@@ -2180,7 +2195,7 @@ function renderAdminCardPhotos(c) {
         <div class="grid grid-cols-4 gap-1.5">
           ${photos.slice(0, 7).map((url, idx) => `
             <div class="relative aspect-square rounded-xl overflow-hidden border border-slate-200 cursor-pointer group"
-                 onclick="openAdminLightbox(${idx}, ${urlsJson.replace(/'/g,"\\'")})" >
+                 onclick="openAdminLightbox(${idx}, ${urlsJson.replace(/'/g,"\\'")})">
               <img src="${url}" alt="" class="w-full h-full object-cover group-hover:scale-105 transition duration-200"
                    onerror="this.parentElement.style.display='none'">
               <div class="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition flex items-center justify-center">
@@ -2205,7 +2220,7 @@ function renderAdminCardPhotos(c) {
 function openAdminLightbox(startIdx, photos) {
   adminLbPhotos = photos;
   adminLbIdx    = startIdx;
-  /* Reuse the customer lightbox element */
+  lbPhotos = [];   // müştəri rejimini sıfırla
   document.getElementById('lightbox').classList.remove('hidden');
   document.body.style.overflow = 'hidden';
   renderAdminLightbox();
@@ -2256,7 +2271,6 @@ function renderCardGrid(cont, fc) {
               ${c.link?`<a href="${c.link}" target="_blank" class="text-xs text-blue-600 hover:text-blue-800 p-1"><i class="fa-solid fa-arrow-up-right-from-square"></i></a>`:''}
             </div>
 
-            <!-- Photo Gallery (admin card) -->
             ${renderAdminCardPhotos(c)}
 
             <div class="bg-slate-50 p-3 rounded-2xl border border-slate-100 space-y-2 text-xs">
