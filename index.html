@@ -51,13 +51,13 @@ body{font-family:'Plus Jakarta Sans',sans-serif;background:#f1f5f9;color:#0f172a
 </head>
 <body class="min-h-screen pb-12 antialiased">
 
-<!-- ===================== TOAST ===================== -->
+<!-- ==== TOAST ==== -->
 <div id="toast" class="fixed bottom-6 right-6 z-[200] transform translate-y-24 opacity-0 transition-all duration-300 bg-slate-900 text-white px-5 py-3.5 rounded-2xl shadow-2xl flex items-center space-x-3 border border-slate-700 max-w-xs">
   <div id="toast-icon-wrap" class="bg-emerald-500 p-1.5 rounded-full shrink-0"><i id="toast-icon" class="fa-solid fa-check text-xs"></i></div>
   <span id="toast-msg" class="text-sm font-medium leading-snug"></span>
 </div>
 
-<!-- ===================== CUSTOMER PANEL (?data= URL) ===================== -->
+<!-- ==== CUSTOMER PANEL (?data= URL) ==== -->
 <div id="customer-panel" class="hidden min-h-screen bg-slate-50">
 
   <!-- Customer Header -->
@@ -117,7 +117,7 @@ body{font-family:'Plus Jakarta Sans',sans-serif;background:#f1f5f9;color:#0f172a
   </div>
 </div><!-- /customer-panel -->
 
-<!-- ===================== ADMIN PANEL ===================== -->
+<!-- ==== ADMIN PANEL ==== -->
 <div id="admin-panel">
 
 <!-- Analytics Backdrop -->
@@ -275,7 +275,7 @@ body{font-family:'Plus Jakarta Sans',sans-serif;background:#f1f5f9;color:#0f172a
 </main>
 </div><!-- /admin-panel -->
 
-<!-- ===================== MODALS ===================== -->
+<!-- ==== MODALS ==== -->
 
 <!-- Photo Management Modal -->
 <div id="photoModal" class="fixed inset-0 z-[55] hidden bg-slate-950/75 backdrop-blur-sm flex items-center justify-center p-4">
@@ -659,20 +659,20 @@ body{font-family:'Plus Jakarta Sans',sans-serif;background:#f1f5f9;color:#0f172a
   </div>
 </div>
 
-<!-- ===================== JAVASCRIPT ===================== -->
+<!-- ==== JAVASCRIPT ==== -->
 <script>
-/* ============================
+/* ====
    KONFİQURASİYA
-   ============================ */
+   ==== */
 const IMGBB_API_KEY  = '6c3e43b6e16dcf44b220df88a5f2d592';
 const MASTER_KEY     = '$2a$10$0CtgW0GNw2Sd00UCBDtzDOj/q0wznPfaz8FpZWFXypZyLO.y/XSay';
 const BIN_ID         = '6a934ca4da38895dfe213a58';
 const JSONBIN_BASE   = 'https://api.jsonbin.io/v3/b/';
 const SECRET_PIN     = '0990';
 
-/* ============================
+/* ====
    STATE
-   ============================ */
+   ==== */
 let cars = [];
 let isAdminLoggedIn = false;
 let isCloudSyncing  = false;
@@ -694,9 +694,9 @@ let lbPhotos     = [];
 let lbIndex      = 0;
 let lbTouchStart = 0;
 
-/* ============================
+/* ====
    INIT
-   ============================ */
+   ==== */
 window.addEventListener('DOMContentLoaded', async () => {
   const params = new URLSearchParams(window.location.search);
   const dataParam = params.get('data');
@@ -759,23 +759,86 @@ window.addEventListener('DOMContentLoaded', async () => {
   }
 });
 
-/* ============================
+/* ====
    CUSTOMER PANEL
-   ============================ */
-function initCustomerPanel(base64) {
-  try {
-    const json = decodeURIComponent(atob(base64));
-    custData = JSON.parse(json);
-  } catch(e) {
-    document.getElementById('customer-panel').innerHTML = `
+   ==== */
+async function initCustomerPanel(base64) {
+  const panel = document.getElementById('customer-panel');
+  const showCustomerError = (title, message) => {
+    panel.innerHTML = `
       <div class="min-h-screen flex items-center justify-center p-8 text-center">
         <div>
           <div class="text-5xl mb-4">⚠️</div>
-          <h2 class="text-xl font-bold text-slate-800 mb-2">Keçərsiz Link</h2>
-          <p class="text-sm text-slate-500">Bu link yanlış və ya müddəti bitmiş ola bilər.</p>
+          <h2 class="text-xl font-bold text-slate-800 mb-2">${title}</h2>
+          <p class="text-sm text-slate-500">${message}</p>
         </div>
       </div>`;
+  };
+
+  const header = document.getElementById('cust-car-header');
+  if (header) header.innerHTML = `
+    <div class="flex items-center justify-center gap-2 py-5 text-sm text-slate-500 font-semibold">
+      <i class="fa-solid fa-spinner fa-spin text-indigo-600"></i> Məlumatlar yenilənir...
+    </div>`;
+
+  let payload;
+  try {
+    payload = JSON.parse(decodeURIComponent(atob(base64)));
+  } catch(e) {
+    showCustomerError('Keçərsiz Link', 'Bu link yanlış və ya müddəti bitmiş ola bilər.');
     return;
+  }
+
+  /* Yeni link yalnız ID saxlayır; məlumat hər açılışda JSONBin-dən alınır. */
+  if (payload && payload.id !== undefined && payload.id !== null) {
+    try {
+      const response = await fetch(`${JSONBIN_BASE}${BIN_ID}/latest?cacheBust=${Date.now()}`, {
+        method: 'GET',
+        headers: {
+          'Accept': 'application/json',
+          'X-Master-Key': MASTER_KEY
+        },
+        cache: 'no-store'
+      });
+      if (!response.ok) throw new Error(`Cloud xətası: ${response.status}`);
+
+      const result = await response.json();
+      const remote = result && result.record !== undefined ? result.record : result;
+      const liveCars = normalizeCars(remote);
+      const liveCar = liveCars.find(car => String(car.id) === String(payload.id));
+      if (!liveCar) {
+        showCustomerError('Avtomobil tapılmadı', 'Bu avtomobil silinmiş və ya link artıq aktiv deyil.');
+        return;
+      }
+
+      const livePhotos = liveCar.photos || {};
+      custData = {
+        n: liveCar.owner || '',
+        m: liveCar.model || '',
+        v: liveCar.vin || '',
+        s: liveCar.status || '',
+        t: liveCar.udus || '',
+        udus: liveCar.udus || '',
+        anbar: liveCar.anbar || '',
+        poti: liveCar.poti || '',
+        baki: liveCar.baki || '',
+        location: liveCar.location || '',
+        shippingPort: liveCar.shippingPort || '',
+        etibarname: !!liveCar.etibarname,
+        shippingPaid: !!liveCar.shippingPaid,
+        ph: {
+          pikap: livePhotos.pikap || [],
+          anbar: livePhotos.anbar || [],
+          sonTehvil: livePhotos.sonTehvil || []
+        }
+      };
+    } catch(e) {
+      showCustomerError('Məlumat yüklənmədi', 'Canlı məlumatları almaq mümkün olmadı. Linki yeniləyib yenidən yoxlayın.');
+      return;
+    }
+  } else {
+    /* Köhnə linklər əvvəlki statik məlumat formatı ilə işləməyə davam edir. */
+    custData = payload;
   }
 
   renderCustomerHeader();
@@ -956,9 +1019,9 @@ async function downloadPhotosAsZip(photosByCategory, baseName) {
   showToast(`${total} şəkil ZIP faylına yükləndi! ✅`, 'success');
 }
 
-/* ============================
+/* ====
    PHOTO MANAGEMENT (Admin)
-   ============================ */
+   ==== */
 function openPhotoModal(carId) {
   currentPhotoCarId = carId;
   currentPhotoTab   = 'pikap';
@@ -1147,34 +1210,17 @@ async function deleteAdminPhoto(index) {
   renderApp();
 }
 
-/* ============================
+/* ====
    CUSTOMER LINK GENERATION
-   ============================ */
+   ==== */
 function openLinkModal(carId) {
-  const car = cars.find(c => c.id === carId);
+  const car = cars.find(c => String(c.id) === String(carId));
   if (!car) return;
 
-  const ph = car.photos || {};
-  const minPh = {
-    pikap:     (ph.pikap     || []).map(p => typeof p === 'string' ? p : p.url),
-    anbar:     (ph.anbar     || []).map(p => typeof p === 'string' ? p : p.url),
-    sonTehvil: (ph.sonTehvil || []).map(p => typeof p === 'string' ? p : p.url),
-  };
-
-  const today = new Date();
-  const dateStr = `${String(today.getDate()).padStart(2,'0')}.${String(today.getMonth()+1).padStart(2,'0')}.${today.getFullYear()}`;
-
-  const payload = {
-    n: car.owner || '',
-    m: car.model || '',
-    v: car.vin   || '',
-    s: car.status || '',
-    t: dateStr,
-    ph: minPh
-  };
-
+  /* Link yalnız ID saxlayır. Müştəri səhifəsi hər açılışda ən son JSONBin datasını oxuyur. */
+  const payload = { id: car.id };
   const encoded = btoa(encodeURIComponent(JSON.stringify(payload)));
-  const link    = `${window.location.origin}${window.location.pathname}?data=${encoded}`;
+  const link = `${window.location.origin}${window.location.pathname}?data=${encoded}`;
 
   document.getElementById('link-output').value = link;
   document.getElementById('linkModal').classList.remove('hidden');
@@ -1206,9 +1252,9 @@ function shareViaWhatsApp() {
   window.open(`https://wa.me/?text=${encodeURIComponent(msg)}`, '_blank');
 }
 
-/* ============================
+/* ====
    JSONBIN.IO CRUD
-   ============================ */
+   ==== */
 function jsonbinError(status) {
   if (status === 401) return '🔒 401: Master Key yanlışdır.';
   if (status === 403) return '🚫 403: Bu BIN-ə giriş qadağandır.';
@@ -1285,9 +1331,9 @@ function exportDataJSON() {
   showToast('Ehtiyat kopya (JSON) yükləndi!');
 }
 
-/* ============================
+/* ====
    TOAST
-   ============================ */
+   ==== */
 function showToast(msg, type = 'info') {
   const toast    = document.getElementById('toast');
   const iconWrap = document.getElementById('toast-icon-wrap');
@@ -1308,9 +1354,9 @@ function showToast(msg, type = 'info') {
   }, type === 'error' ? 5000 : 3000);
 }
 
-/* ============================
+/* ====
    TRACKING COMPANIES
-   ============================ */
+   ==== */
 function loadTrackingCompanies() {
   const saved = localStorage.getItem('carzone_tracking_companies');
   if (saved) { try { trackingCompanies = JSON.parse(saved); if (!Array.isArray(trackingCompanies)) trackingCompanies = []; } catch(e) { trackingCompanies = []; } }
@@ -1427,9 +1473,9 @@ async function copyContainerAndTrack(carId, event) {
   window.open(company.url, '_blank');
 }
 
-/* ============================
+/* ====
    DATE UTILS
-   ============================ */
+   ==== */
 function parseAppDate(str) {
   if (!str) return null;
   let m = String(str).match(/^(\d{1,2})\.(\d{1,2})\.(\d{4})$/);
@@ -1464,14 +1510,14 @@ function adjustDateField(id, delta) {
 function diffDays(d1, d2) {
   const a = parseAppDate(d1), b = parseAppDate(d2);
   if (!a || !b) return null;
-  return Math.ceil((b - a) / 86400000);
+  return Math.ceil((b - a) / 8640000);
 }
 
 function getDaysToPoti(potiStr) {
   const dt = parseAppDate(potiStr);
   if (!dt) return null;
   const today = new Date(); today.setHours(0,0,0,0); dt.setHours(0,0,0,0);
-  return Math.ceil((dt - today) / 86400000);
+  return Math.ceil((dt - today) / 8640000);
 }
 
 function normalizeCars(list) {
@@ -1487,9 +1533,9 @@ function normalizeCars(list) {
   }));
 }
 
-/* ============================
+/* ====
    PIN LOGIC
-   ============================ */
+   ==== */
 function openPinPrompt() {
   document.getElementById('pin-input').value = '';
   document.getElementById('pin-error-msg').classList.add('hidden');
@@ -1545,9 +1591,9 @@ function updateAdminUI() {
   renderApp();
 }
 
-/* ============================
+/* ====
    ANALYTICS - LOGISTICS
-   ============================ */
+   ==== */
 function toggleLogisticsAnalytics(show) {
   const section  = document.getElementById('logistics-analytics-section');
   const backdrop = document.getElementById('analyticsBackdrop');
@@ -1614,9 +1660,9 @@ function renderLogisticsAnalytics() {
   }).join('');
 }
 
-/* ============================
+/* ====
    ANALYTICS - FINANCIAL
-   ============================ */
+   ==== */
 function calculateCarNetProfit(c) {
   const ct = (parseFloat(c.clientShipping)||0)+(parseFloat(c.clientInsurance)||0)+(parseFloat(c.clientPotiBaku)||0);
   const rt = (parseFloat(c.realShipping)||0)+(parseFloat(c.realInsurance)||0)+(parseFloat(c.realPotiBaku)||0)+(parseFloat(c.extraCost)||0);
@@ -1649,9 +1695,9 @@ function renderFinancialAnalytics() {
       }).join('');
 }
 
-/* ============================
+/* ====
    POTI TRACKING
-   ============================ */
+   ==== */
 function openPotiTrackingModal() { document.getElementById('potiTrackingModal').classList.remove('hidden'); renderPotiTrackingList(); }
 function closePotiTrackingModal() { document.getElementById('potiTrackingModal').classList.add('hidden'); }
 
@@ -1734,9 +1780,9 @@ async function toggleShippingPaidStatus(id) {
   renderPotiTrackingList();
 }
 
-/* ============================
+/* ====
    CAR MODAL (Add/Edit)
-   ============================ */
+   ==== */
 function openModal(id = null) {
   document.getElementById('carForm').reset();
   tempAttachedDocs = [];
@@ -1777,386 +1823,3 @@ async function handleFormSubmit(e) {
   e.preventDefault();
   const id = document.getElementById('form-id').value;
   let imageUrl = document.getElementById('form-image-url').value;
-  await processSaveCar(id, imageUrl);
-}
-
-async function processSaveCar(id, imageUrl) {
-  const existing = id ? cars.find(c=>c.id===parseInt(id)) : null;
-  const carData = {
-    ...(existing||{}),
-    id: id ? parseInt(id) : Date.now(),
-    owner: document.getElementById('form-owner').value.trim(),
-    model: document.getElementById('form-model').value.trim(),
-    vin: document.getElementById('form-vin').value.trim(),
-    location: document.getElementById('form-location').value.trim(),
-    shippingPort: document.getElementById('form-shipping-port').value.trim(),
-    container: document.getElementById('form-container').value.trim(),
-    trackingCompanyId: document.getElementById('form-tracking-company').value ? parseInt(document.getElementById('form-tracking-company').value) : null,
-    udus: formatDateDMY(document.getElementById('form-udus').value.trim()),
-    anbar: formatDateDMY(document.getElementById('form-anbar').value.trim()),
-    poti: formatDateDMY(document.getElementById('form-poti').value.trim()),
-    baki: formatDateDMY(document.getElementById('form-baki').value.trim()),
-    status: document.getElementById('form-status').value,
-    imageUrl: imageUrl,
-    carCost: parseFloat(document.getElementById('form-car-cost').value)||0,
-    realShipping: parseFloat(document.getElementById('form-real-shipping').value)||0,
-    clientShipping: parseFloat(document.getElementById('form-client-shipping').value)||0,
-    realInsurance: parseFloat(document.getElementById('form-real-insurance').value)||0,
-    clientInsurance: parseFloat(document.getElementById('form-client-insurance').value)||0,
-    realPotiBaku: parseFloat(document.getElementById('form-real-poti-baku').value)||0,
-    clientPotiBaku: parseFloat(document.getElementById('form-client-poti-baku').value)||0,
-    serviceFee: parseFloat(document.getElementById('form-service-fee').value)||0,
-    extraCost: parseFloat(document.getElementById('form-extra-cost').value)||0,
-    link: document.getElementById('form-link').value.trim(),
-    documents: tempAttachedDocs,
-    etibarname: document.getElementById('form-etibarname').checked,
-    shippingPaid: document.getElementById('form-shipping-paid').checked,
-    photos: (existing && existing.photos) || { pikap: [], anbar: [], sonTehvil: [] }
-  };
-  if (id) { const i = cars.findIndex(c=>c.id===parseInt(id)); cars[i] = carData; }
-  else cars.push(carData);
-  closeModal();
-  await saveData('✅ Avtomobil məlumatları cloud-a yazıldı!');
-}
-
-function editCar(id) { openModal(id); }
-function promptDeleteCar(id) { pendingDeleteCarId = id; document.getElementById('deleteModal').classList.remove('hidden'); }
-function closeDeleteModal() { pendingDeleteCarId = null; document.getElementById('deleteModal').classList.add('hidden'); }
-
-async function confirmDeleteCar() {
-  if (pendingDeleteCarId !== null) {
-    cars = cars.filter(c=>c.id!==pendingDeleteCarId);
-    closeDeleteModal();
-    await saveData('🗑️ Avtomobil silindi!');
-  }
-}
-
-function renderAttachedDocsList() {
-  const el = document.getElementById('attached-docs-list');
-  if (!el) return;
-  if (!tempAttachedDocs.length) { el.innerHTML = `<span class="text-[11px] text-slate-400">Heç bir sənəd əlavə edilməyib</span>`; return; }
-  el.innerHTML = tempAttachedDocs.map((d,i) => `
-    <div class="flex items-center justify-between bg-white border border-slate-200 px-3 py-1.5 rounded-xl text-xs">
-      <div class="flex items-center space-x-2 truncate">
-        <i class="fa-solid fa-file-contract text-blue-600"></i>
-        <span class="font-bold text-slate-800">${d.type}:</span>
-        <span class="text-slate-600 truncate max-w-[150px]">${d.fileName}</span>
-      </div>
-      <button type="button" onclick="removeDoc(${i})" class="text-rose-500 hover:text-rose-700 ml-2"><i class="fa-solid fa-xmark"></i></button>
-    </div>`).join('');
-}
-
-function removeDoc(i) { tempAttachedDocs.splice(i,1); renderAttachedDocsList(); }
-
-/* ============================
-   SINGLE CAR FINANCE MODAL
-   ============================ */
-function openSingleCarFinance(id) {
-  if (!isAdminLoggedIn) { pendingCarIdToView = id; openPinPrompt(); return; }
-  const c = cars.find(x=>x.id===id); if (!c) return;
-  document.getElementById('single-car-title').textContent = c.model;
-  document.getElementById('single-car-owner').textContent = `Müştəri: ${c.owner}`;
-  const np = calculateCarNetProfit(c);
-  const ct = (parseFloat(c.clientShipping)||0)+(parseFloat(c.clientInsurance)||0)+(parseFloat(c.clientPotiBaku)||0);
-  const rt = (parseFloat(c.realShipping)||0)+(parseFloat(c.realInsurance)||0)+(parseFloat(c.realPotiBaku)||0)+(parseFloat(c.extraCost)||0);
-  document.getElementById('single-car-details').innerHTML = `
-    <div class="bg-emerald-500/10 border border-emerald-500/30 p-4 rounded-2xl flex items-center justify-between">
-      <div><span class="text-[10px] uppercase font-bold text-emerald-400 block">Xalis Mənfəət</span><span class="text-2xl font-black ${np>=0?'text-emerald-400':'text-rose-400'}">${np>=0?'+':''}$${np.toLocaleString()}</span></div>
-      <div class="text-right"><span class="text-[10px] uppercase font-bold text-amber-400 block">Xidmət Haqqı</span><span class="text-base font-bold text-amber-300">$${c.serviceFee||0}</span></div>
-    </div>
-    <div class="grid grid-cols-2 gap-3 pt-2">
-      <div class="bg-slate-800/40 p-3 rounded-xl border border-slate-800 space-y-1">
-        <span class="text-[10px] text-slate-400 uppercase font-bold block">Müştəriyə Deyilən</span>
-        <div class="flex justify-between"><span>Nəqliyyat:</span><span class="font-mono">$${c.clientShipping||0}</span></div>
-        <div class="flex justify-between"><span>Sığorta:</span><span class="font-mono">$${c.clientInsurance||0}</span></div>
-        <div class="flex justify-between"><span>Poti-Bakı:</span><span class="font-mono">$${c.clientPotiBaku||0}</span></div>
-        <div class="border-t border-slate-700 pt-1 flex justify-between font-bold text-emerald-400"><span>Cəmi:</span><span class="font-mono">$${ct}</span></div>
-      </div>
-      <div class="bg-slate-800/40 p-3 rounded-xl border border-slate-800 space-y-1">
-        <span class="text-[10px] text-slate-400 uppercase font-bold block">Real Çıxarışlar</span>
-        <div class="flex justify-between"><span>Nəqliyyat:</span><span class="font-mono">$${c.realShipping||0}</span></div>
-        <div class="flex justify-between"><span>Sığorta:</span><span class="font-mono">$${c.realInsurance||0}</span></div>
-        <div class="flex justify-between"><span>Poti-Bakı:</span><span class="font-mono">$${c.realPotiBaku||0}</span></div>
-        <div class="flex justify-between text-rose-400"><span>Əlavə:</span><span class="font-mono">$${c.extraCost||0}</span></div>
-        <div class="border-t border-slate-700 pt-1 flex justify-between font-bold text-rose-400"><span>Cəmi Real:</span><span class="font-mono">$${rt}</span></div>
-      </div>
-    </div>`;
-  document.getElementById('singleCarFinanceModal').classList.remove('hidden');
-}
-function closeSingleCarFinanceModal() { document.getElementById('singleCarFinanceModal').classList.add('hidden'); }
-
-/* ============================
-   FINAL FINANCE MODAL
-   ============================ */
-function openFinalFinanceReport() {
-  if (!isAdminLoggedIn) { openPinPrompt(); return; }
-  const fc = getFilteredCars();
-  let carC=0,cS=0,cI=0,cP=0,rS=0,rI=0,rP=0,sf=0,ex=0;
-  fc.forEach(c=>{
-    carC+=parseFloat(c.carCost)||0; cS+=parseFloat(c.clientShipping)||0; cI+=parseFloat(c.clientInsurance)||0; cP+=parseFloat(c.clientPotiBaku)||0;
-    rS+=parseFloat(c.realShipping)||0; rI+=parseFloat(c.realInsurance)||0; rP+=parseFloat(c.realPotiBaku)||0; sf+=parseFloat(c.serviceFee)||0; ex+=parseFloat(c.extraCost)||0;
-  });
-  const ct = carC+cS+cI+cP+sf, rc = rS+rI+rP+ex, np = (cS+cI+cP-rc)+sf;
-  document.getElementById('report-date').textContent = new Date().toLocaleDateString('az-AZ');
-  document.getElementById('report-total-cars-count').textContent = fc.length;
-  document.getElementById('rpt-client-total').textContent = `$${ct.toLocaleString()}`;
-  document.getElementById('rpt-real-total').textContent = `$${rc.toLocaleString()}`;
-  document.getElementById('rpt-service-total').textContent = `$${sf.toLocaleString()}`;
-  document.getElementById('rpt-net-profit').textContent = `${np>=0?'+':''}$${np.toLocaleString()}`;
-  document.getElementById('rpt-car-costs').textContent = `$${carC.toLocaleString()}`;
-  document.getElementById('rpt-client-ship').textContent = `$${cS.toLocaleString()}`;
-  document.getElementById('rpt-client-ins').textContent = `$${cI.toLocaleString()}`;
-  document.getElementById('rpt-client-poti').textContent = `$${cP.toLocaleString()}`;
-  document.getElementById('rpt-service-fee-sub').textContent = `$${sf.toLocaleString()}`;
-  document.getElementById('rpt-real-ship').textContent = `$${rS.toLocaleString()}`;
-  document.getElementById('rpt-real-ins').textContent = `$${rI.toLocaleString()}`;
-  document.getElementById('rpt-real-poti').textContent = `$${rP.toLocaleString()}`;
-  document.getElementById('rpt-extra-costs').textContent = `$${ex.toLocaleString()}`;
-  document.getElementById('rpt-real-total-sub').textContent = `$${rc.toLocaleString()}`;
-  document.getElementById('rpt-analysis-text').textContent = np > 0
-    ? `Maliyyə portfeli müsbət (+) göstəricidədir. Şirkət xalis $${np.toLocaleString()} mənfəət əldə edib.`
-    : np === 0 ? `Maliyyə balansı sıfır ($0) səviyyəsindədir.`
-    : `⚠️ XƏBƏRDARLIQ: Maliyyə portfeli mənfi (-) göstəricidədir ($${np.toLocaleString()}). Real xərclər müştəriyə deyilən qiymətlərdən yuxarıdır.`;
-  document.getElementById('finalFinanceReportModal').classList.remove('hidden');
-}
-function closeFinalFinanceReport() { document.getElementById('finalFinanceReportModal').classList.add('hidden'); }
-
-/* ============================
-   FILTERS & KPI
-   ============================ */
-function getFilteredCars() {
-  const sq = document.getElementById('filter-search').value.toLowerCase().trim();
-  const fy = document.getElementById('filter-year').value;
-  const fm = document.getElementById('filter-month').value;
-  const fl = document.getElementById('filter-location').value;
-  const fp = document.getElementById('filter-port').value;
-  const fs = document.getElementById('filter-status').value;
-  let res = cars.filter(c => {
-    const ms = (c.owner||'').toLowerCase().includes(sq)||(c.model||'').toLowerCase().includes(sq)||
-               (c.container||'').toLowerCase().includes(sq)||(c.vin||'').toLowerCase().includes(sq)||
-               (c.location||'').toLowerCase().includes(sq)||(c.shippingPort||'').toLowerCase().includes(sq);
-    const my = fy==='ALL'||(c.udus&&c.udus.split('.')[2]===fy);
-    const mm = fm==='ALL'||(c.udus&&c.udus.split('.')[1]===fm);
-    const ml = fl==='ALL'||c.location===fl;
-    const mp = fp==='ALL'||c.shippingPort===fp;
-    const mst= fs==='ALL'||c.status===fs;
-    return ms&&my&&mm&&ml&&mp&&mst;
-  });
-  res.sort((a,b)=>(parseAppDate(b.udus)||new Date(0))-(parseAppDate(a.udus)||new Date(0)));
-  return res;
-}
-
-function populateFilters() {
-  const ys = document.getElementById('filter-year');
-  const ls = document.getElementById('filter-location');
-  const ps = document.getElementById('filter-port');
-  const [cy,cl,cp] = [ys.value, ls.value, ps.value];
-  const years=new Set(), locs=new Set(), ports=new Set();
-  cars.forEach(c=>{
-    if(c.udus) years.add(c.udus.split('.')[2]);
-    if(c.location) locs.add(c.location);
-    if(c.shippingPort) ports.add(c.shippingPort);
-  });
-  ys.innerHTML = `<option value="ALL">📅 Bütün İllər</option>`+[...years].sort().reverse().map(y=>`<option value="${y}">${y}</option>`).join('');
-  ls.innerHTML = `<option value="ALL">📍 Bütün Məkanlar</option>`+[...locs].sort().map(l=>`<option value="${l}">${l}</option>`).join('');
-  ps.innerHTML = `<option value="ALL">⚓ Bütün Portlar</option>`+[...ports].sort().map(p=>`<option value="${p}">${p}</option>`).join('');
-  ys.value=cy; ls.value=cl; ps.value=cp;
-}
-
-function renderKPI() {
-  const f = getFilteredCars();
-  document.getElementById('kpi-total').textContent     = f.length;
-  document.getElementById('kpi-auction').textContent   = f.filter(c=>c.status==='Auksionda'||c.status==='Anbara gedir').length;
-  document.getElementById('kpi-warehouse').textContent = f.filter(c=>c.status==='Anbarda').length;
-  document.getElementById('kpi-ship').textContent      = f.filter(c=>c.status==='Gəmidə').length;
-  document.getElementById('kpi-poti').textContent      = f.filter(c=>c.status==='Potidədir').length;
-  document.getElementById('kpi-baku').textContent      = f.filter(c=>c.status==='Bakıdadır').length;
-}
-
-function renderApp() {
-  populateFilters(); renderKPI();
-  if (isAdminLoggedIn) renderFinancialAnalytics();
-  renderCarsContainer();
-  renderLogisticsAnalytics();
-}
-
-function setViewMode(mode) {
-  currentViewMode = mode;
-  const actCls  = 'px-3 py-1.5 rounded-lg text-xs font-bold transition flex items-center gap-1.5 bg-white text-red-600 shadow-sm';
-  const inaCls  = 'px-3 py-1.5 rounded-lg text-xs font-bold transition flex items-center gap-1.5 text-slate-600 hover:text-slate-900';
-  document.getElementById('btn-view-card').className  = mode==='card'  ? actCls : inaCls;
-  document.getElementById('btn-view-table').className = mode==='table' ? actCls : inaCls;
-  renderCarsContainer();
-}
-
-/* ============================
-   RENDERING - CARDS & TABLE
-   ============================ */
-function renderCarsContainer() {
-  const cont = document.getElementById('cars-container');
-  const fc = getFilteredCars();
-  if (!fc.length) {
-    cont.innerHTML = `<div class="bg-white rounded-3xl p-12 text-center border border-slate-200">
-      <i class="fa-solid ${cars.length?'fa-car':'fa-folder-open'} text-4xl text-slate-300 mb-3 block"></i>
-      <h3 class="text-base font-bold text-slate-700">${cars.length?'Heç bir avtomobil tapılmadı':'Hələ heç bir məlumat yoxdur'}</h3>
-      <p class="text-xs text-slate-400 mt-1">${cars.length?'Axtarış parametrlərini dəyişin.':'Yeni maşın əlavə edərək başlayın.'}</p>
-    </div>`; return;
-  }
-  currentViewMode === 'card' ? renderCardGrid(cont, fc) : renderTableView(cont, fc);
-}
-
-function getPhotoStatusHtml(car) {
-  const ph = car.photos || {};
-  const cats = [
-    { key:'pikap',     icon:'📦', label:'Pikap' },
-    { key:'anbar',     icon:'🏭', label:'Anbar' },
-    { key:'sonTehvil', icon:'🚗', label:'Son T.' },
-  ];
-  return cats.map(c => {
-    const cnt = (ph[c.key]||[]).length;
-    return `<span title="${c.label}: ${cnt} şəkil" class="flex items-center gap-0.5 text-[10px] font-bold ${cnt>0?'text-emerald-700':'text-rose-500'}">
-      <span>${cnt>0?'🟢':'🔴'}</span><span>${c.icon}</span>${cnt>0?cnt:''}
-    </span>`;
-  }).join('');
-}
-
-function renderCardGrid(cont, fc) {
-  let html = `<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">`;
-  fc.forEach(c => {
-    const pd = diffDays(c.udus,c.anbar), sd = diffDays(c.udus,c.poti), pbd = diffDays(c.poti,c.baki), td = diffDays(c.udus,c.baki||new Date().toISOString().split('T')[0]);
-    const np = calculateCarNetProfit(c);
-    const sbCls = {
-      'Potidədir':'bg-purple-100 text-purple-800 font-bold border border-purple-200',
-      'Bakıdadır':'bg-emerald-100 text-emerald-800 font-bold border border-emerald-200',
-      'Gəmidə':'bg-blue-100 text-blue-800 font-bold border border-blue-200',
-    }[c.status] || 'bg-slate-100 text-slate-700';
-
-    html += `
-      <div class="bg-white border border-slate-200 rounded-3xl overflow-hidden shadow-sm hover:shadow-xl transition duration-300 flex flex-col">
-        <div>
-          <div class="relative h-44 bg-slate-900 overflow-hidden group">
-            ${c.imageUrl ? `
-              <img src="${c.imageUrl}" class="w-full h-full object-cover group-hover:scale-105 transition duration-500" alt="${c.model}" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">
-              <div class="w-full h-full flex flex-col items-center justify-center text-slate-600 bg-slate-800" style="display:none"><i class="fa-solid fa-image text-3xl mb-1"></i></div>
-            ` : `<div class="w-full h-full flex flex-col items-center justify-center text-slate-600 bg-slate-800"><i class="fa-solid fa-car text-4xl mb-2 opacity-30"></i><span class="text-xs text-slate-500">Şəkil yoxdur</span></div>`}
-            <div class="absolute top-3 left-3 bg-slate-900/80 backdrop-blur text-white text-[11px] font-extrabold px-3 py-1 rounded-full border border-slate-700">👤 ${c.owner||'Sahiblənməyib'}</div>
-            <div class="absolute top-3 right-3"><span class="text-[11px] px-3 py-1 rounded-full shadow-md ${sbCls}">${c.status}</span></div>
-          </div>
-
-          <div class="p-5 space-y-3.5">
-            <div class="flex items-start justify-between">
-              <div>
-                <h3 class="font-extrabold text-base text-slate-900 tracking-tight leading-snug">${c.model}</h3>
-                <p class="text-[11px] font-mono text-slate-400 mt-0.5">VIN: ${c.vin||'Qeyd edilməyib'}</p>
-              </div>
-              ${c.link?`<a href="${c.link}" target="_blank" class="text-xs text-blue-600 hover:text-blue-800 p-1"><i class="fa-solid fa-arrow-up-right-from-square"></i></a>`:''}
-            </div>
-
-            <!-- Photo Status -->
-            <div class="bg-slate-50 border border-slate-100 rounded-xl px-3 py-2 flex items-center gap-3">
-              <span class="text-[10px] font-bold text-slate-400 uppercase shrink-0">Şəkillər:</span>
-              <div class="flex items-center gap-2">${getPhotoStatusHtml(c)}</div>
-            </div>
-
-            <div class="bg-slate-50 p-3 rounded-2xl border border-slate-100 space-y-2 text-xs">
-              <div class="flex items-center justify-between text-slate-700 font-medium">
-                <span class="text-slate-400">Məkan:</span>
-                <span class="font-semibold text-amber-800 bg-amber-50 border border-amber-200/60 px-2 py-0.5 rounded-md">📍 ${c.location||'-'}</span>
-              </div>
-              <div class="flex items-center justify-between text-slate-700 font-medium">
-                <span class="text-slate-400">Çıxış Portu:</span>
-                <span class="font-semibold text-blue-800 bg-blue-50 border border-blue-200/60 px-2 py-0.5 rounded-md">⚓ ${c.shippingPort||'-'}</span>
-              </div>
-              <div class="flex items-center justify-between text-slate-700 font-medium">
-                <span class="text-slate-400">Konteyner:</span>
-                <span class="font-mono text-xs font-bold text-slate-800">${c.container||'-'}</span>
-              </div>
-              ${c.container?`<button type="button" onclick="copyContainerAndTrack(${c.id})" class="w-full flex items-center justify-center gap-2 py-2 mt-1 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 rounded-xl text-[11px] font-bold transition"><i class="fa-solid fa-anchor"></i> Konteyneri İzlə</button>`:''}
-            </div>
-
-            <div class="flex items-center gap-2 text-[11px] font-bold flex-wrap">
-              <span class="px-2.5 py-1 rounded-lg border ${c.etibarname?'bg-emerald-50 text-emerald-800 border-emerald-200':'bg-rose-50 text-rose-800 border-rose-200'}">${c.etibarname?'📜 Etibarnamə':'⚠️ Etibarnamə Yoxdur'}</span>
-              <span class="px-2.5 py-1 rounded-lg border ${c.shippingPaid?'bg-emerald-50 text-emerald-800 border-emerald-200':'bg-amber-50 text-amber-800 border-amber-200'}">${c.shippingPaid?'💵 Ödənilib':'⏳ Gözlənilir'}</span>
-            </div>
-
-            <div class="space-y-1.5 text-[11px]">
-              <div class="flex justify-between items-center text-slate-600"><span>Uduş tarixi:</span><span class="font-mono font-bold text-slate-900">${c.udus||'-'}</span></div>
-              <div class="flex justify-between items-center text-slate-600"><span>Anbara giriş:</span><span class="font-mono text-slate-800">${c.anbar||'-'} ${pd!==null?`<strong class="text-amber-600">(${pd}g)</strong>`:''}</span></div>
-              <div class="flex justify-between items-center text-indigo-900 font-medium"><span>Potiyə giriş:</span><span class="font-mono font-bold text-indigo-700">${c.poti||'-'} ${sd!==null?`<strong class="text-indigo-600">(${sd}g)</strong>`:''}</span></div>
-              <div class="flex justify-between items-center text-slate-600"><span>Bakı-Gömrük:</span><span class="font-mono text-slate-800">${c.baki||'-'} ${pbd!==null?`<strong class="text-emerald-600">(${pbd}g)</strong>`:''}</span></div>
-              ${td!==null?`<div class="pt-2 border-t border-slate-100 flex justify-between items-center font-bold text-slate-900"><span>Ümumi Müddət:</span><span class="font-mono text-red-600">${td} Gün</span></div>`:''}
-            </div>
-
-            ${isAdminLoggedIn?`<div class="bg-amber-50 border border-amber-200 p-3 rounded-2xl flex items-center justify-between"><span class="text-xs font-bold text-amber-900">Net Mənfəət:</span><span class="text-base font-black ${np>=0?'text-emerald-600':'text-rose-600'}">${np>=0?'+':''}$${np.toLocaleString()}</span></div>`:''}
-          </div>
-        </div>
-
-        <div class="p-4 bg-slate-50 border-t border-slate-100 flex items-center justify-between gap-2 mt-auto">
-          <div class="flex items-center gap-2">
-            <button onclick="openPhotoModal(${c.id})" title="Şəkil İdarəetməsi" class="px-3 py-2 bg-indigo-100 hover:bg-indigo-200 text-indigo-800 rounded-xl text-xs font-bold transition flex items-center gap-1.5 border border-indigo-200">
-              <i class="fa-solid fa-images"></i><span class="hidden sm:inline">Şəkillər</span>
-            </button>
-            <button onclick="openLinkModal(${c.id})" title="Müştəri Linki Yarat" class="px-3 py-2 bg-emerald-100 hover:bg-emerald-200 text-emerald-800 rounded-xl text-xs font-bold transition flex items-center gap-1.5 border border-emerald-200">
-              <i class="fa-solid fa-link"></i><span class="hidden sm:inline">Link</span>
-            </button>
-          </div>
-          <div class="flex items-center space-x-1.5">
-            <button onclick="openSingleCarFinance(${c.id})" title="Maliyyə" class="p-2.5 bg-amber-100 hover:bg-amber-200 text-amber-800 rounded-xl text-xs font-bold transition border border-amber-200"><i class="fa-solid fa-lock"></i></button>
-            <button onclick="editCar(${c.id})" title="Düzəliş et" class="p-2.5 bg-slate-200 hover:bg-slate-300 text-slate-700 rounded-xl text-xs font-bold transition"><i class="fa-solid fa-pen-to-square"></i></button>
-            <button onclick="promptDeleteCar(${c.id})" title="Sil" class="p-2.5 bg-rose-100 hover:bg-rose-200 text-rose-700 rounded-xl text-xs font-bold transition border border-rose-200"><i class="fa-solid fa-trash"></i></button>
-          </div>
-        </div>
-      </div>`;
-  });
-  html += `</div>`;
-  cont.innerHTML = html;
-}
-
-function renderTableView(cont, fc) {
-  let html = `<div class="bg-white border border-slate-200 rounded-3xl overflow-hidden shadow-sm overflow-x-auto">
-    <table class="w-full text-left border-collapse text-xs">
-      <thead>
-        <tr class="bg-slate-900 text-white uppercase text-[10px] font-black tracking-wider">
-          <th class="p-4">Uduş</th><th class="p-4">Poti</th><th class="p-4">Müştəri</th><th class="p-4">Model</th>
-          <th class="p-4">Etibarnamə</th><th class="p-4">Yol Pulu</th><th class="p-4">Məkan</th><th class="p-4">Konteyner</th>
-          <th class="p-4">Şəkillər</th>${isAdminLoggedIn?`<th class="p-4 text-emerald-400">Net ($)</th>`:''}
-          <th class="p-4">Status</th><th class="p-4 text-center">Əməliyyat</th>
-        </tr>
-      </thead>
-      <tbody class="divide-y divide-slate-100">`;
-  fc.forEach(c => {
-    const np = calculateCarNetProfit(c);
-    html += `<tr class="hover:bg-slate-50/80 transition">
-      <td class="p-4 font-mono font-bold text-slate-500">${c.udus||'-'}</td>
-      <td class="p-4 font-mono font-bold ${c.poti?'text-indigo-600':'text-amber-600'}">${c.poti||'⚠️ Yoxdur'}</td>
-      <td class="p-4 font-bold text-red-600">👤 ${c.owner||'-'}</td>
-      <td class="p-4 font-bold text-slate-900">${c.model}</td>
-      <td class="p-4"><span class="px-2 py-0.5 rounded text-[10px] font-bold ${c.etibarname?'bg-emerald-100 text-emerald-800':'bg-rose-100 text-rose-800'}">${c.etibarname?'📜 Verilib':'⚠️ Yoxdur'}</span></td>
-      <td class="p-4"><span class="px-2 py-0.5 rounded text-[10px] font-bold ${c.shippingPaid?'bg-emerald-100 text-emerald-800':'bg-amber-100 text-amber-800'}">${c.shippingPaid?'💵 Ödənilib':'⏳ Gözlənilir'}</span></td>
-      <td class="p-4 font-semibold text-slate-800">📍 ${c.location||'-'}</td>
-      <td class="p-4 font-mono font-semibold text-xs text-slate-800">
-        <div class="flex items-center gap-2">
-          <span>${c.container||'-'}</span>
-          ${c.container?`<button type="button" onclick="copyContainerAndTrack(${c.id})" class="p-1.5 bg-indigo-50 text-indigo-700 rounded border border-indigo-200 hover:bg-indigo-100"><i class="fa-solid fa-anchor"></i></button>`:''}
-        </div>
-      </td>
-      <td class="p-4"><div class="flex items-center gap-1">${getPhotoStatusHtml(c)}</div></td>
-      ${isAdminLoggedIn?`<td class="p-4 font-black ${np>=0?'text-emerald-600':'text-rose-600'}">${np>=0?'+':''}$${np.toLocaleString()}</td>`:''}
-      <td class="p-4"><span class="px-2.5 py-1 rounded-full text-[10px] font-bold bg-slate-100 text-slate-700">${c.status}</span></td>
-      <td class="p-4">
-        <div class="flex items-center justify-center space-x-1">
-          <button onclick="openPhotoModal(${c.id})" class="p-1.5 bg-indigo-50 text-indigo-700 rounded border border-indigo-200 hover:bg-indigo-100" title="Şəkillər"><i class="fa-solid fa-images"></i></button>
-          <button onclick="openLinkModal(${c.id})" class="p-1.5 bg-emerald-50 text-emerald-700 rounded border border-emerald-200 hover:bg-emerald-100" title="Link"><i class="fa-solid fa-link"></i></button>
-          <button onclick="openSingleCarFinance(${c.id})" class="p-1.5 bg-amber-50 text-amber-700 rounded border border-amber-200 hover:bg-amber-100"><i class="fa-solid fa-lock"></i></button>
-          <button onclick="editCar(${c.id})" class="p-1.5 bg-slate-100 text-slate-700 rounded hover:bg-slate-200"><i class="fa-solid fa-pen-to-square"></i></button>
-          <button onclick="promptDeleteCar(${c.id})" class="p-1.5 bg-rose-50 text-rose-700 rounded border border-rose-200 hover:bg-rose-100"><i class="fa-solid fa-trash"></i></button>
-        </div>
-      </td>
-    </tr>`;
-  });
-  html += `</tbody></table></div>`;
-  cont.innerHTML = html;
-}
-</script>
-</body>
-</html>
