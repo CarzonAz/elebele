@@ -1196,6 +1196,19 @@ async function uploadToImgBB(file) {
   };
 }
 
+function openAdminLightbox(index) {
+  const car = cars.find(c => c.id === currentPhotoCarId);
+  if (!car) return;
+  const ph = car.photos || {};
+  const photos = ph[currentPhotoTab] || [];
+  lbPhotos = photos.map(p => typeof p === 'string' ? p : (p && (p.url || p.thumb)) || '');
+  lbIndex  = index;
+  document.getElementById('lightbox').classList.remove('hidden');
+  document.body.style.overflow = 'hidden';
+  document.getElementById('lb-dl-btn').classList.remove('hidden');
+  renderLightbox();
+}
+
 async function deleteAdminPhoto(index) {
   if (!currentPhotoCarId) return;
   const car = cars.find(c => c.id === currentPhotoCarId);
