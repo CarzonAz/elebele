@@ -762,20 +762,63 @@ window.addEventListener('DOMContentLoaded', async () => {
 /* ============================
    CUSTOMER PANEL
    ============================ */
-function initCustomerPanel(base64) {
-  try {
-    const json = decodeURIComponent(atob(base64));
-    custData = JSON.parse(json);
-  } catch(e) {
-    document.getElementById('customer-panel').innerHTML = `
+async function initCustomerPanel(base64) {
+  const panel = document.getElementById('customer-panel');
+  const showCustomerError = (title, message) => {
+    panel.innerHTML = `
       <div class="min-h-screen flex items-center justify-center p-8 text-center">
         <div>
           <div class="text-5xl mb-4">⚠️</div>
-          <h2 class="text-xl font-bold text-slate-800 mb-2">Keçərsiz Link</h2>
-          <p class="text-sm text-slate-500">Bu link yanlış və ya müddəti bitmiş ola bilər.</p>
+          <h2 class="text-xl font-bold text-slate-800 mb-2">${title}</h2>
+          <p class="text-sm text-slate-500">${message}</p>
         </div>
       </div>`;
+  };
+
+  panel.querySelector('#cust-car-header').innerHTML = `
+    <div class="flex items-center justify-center gap-2 py-5 text-sm text-slate-500 font-semibold">
+      <i class="fa-solid fa-spinner fa-spin text-indigo-600"></i> Məlumatlar yenilənir...
+    </div>`;
+
+  let payload;
+  try {
+    payload = JSON.parse(decodeURIComponent(atob(base64)));
+  } catch(e) {
+    showCustomerError('Keçərsiz Link', 'Bu link yanlış və ya müddəti bitmiş ola bilər.');
     return;
+  }
+
+  /* New links contain only the car id. The actual record is read every time. */
+  if (payload && payload.id !== undefined && payload.id !== null) {
+    try {
+      const response = await fetch(`${JSONBIN_BASE}${BIN_ID}/latest`, {
+        headers: { 'X-Master-Key': MASTER_KEY, 'Cache-Control': 'no-cache' }
+      });
+      if (!response.ok) throw new Error(`Cloud xətası: ${response.status}`);
+      const result = await response.json();
+      const remote = result && result.record ? result.record : result;
+      const liveCars = normalizeCars(remote);
+      const liveCar = liveCars.find(car => String(car.id) === String(payload.id));
+      if (!liveCar) {
+        showCustomerError('Avtomobil tapılmadı', 'Bu avtomobil silinmiş və ya link artıq aktiv deyil.');
+        return;
+      }
+      custData = {
+        n: liveCar.owner || '', m: liveCar.model || '', v: liveCar.vin || '',
+        s: liveCar.status || '', t: liveCar.udus || '',
+        udus: liveCar.udus || '', anbar: liveCar.anbar || '',
+        poti: liveCar.poti || '', baki: liveCar.baki || '',
+        location: liveCar.location || '', shippingPort: liveCar.shippingPort || '',
+        etibarname: !!liveCar.etibarname, shippingPaid: !!liveCar.shippingPaid,
+        ph: liveCar.photos || { pikap: [], anbar: [], sonTehvil: [] }
+      };
+    } catch(e) {
+      showCustomerError('Məlumat yüklənmədi', 'Canlı məlumatları almaq mümkün olmadı. Zəhmət olmasa linki yenidən açın.');
+      return;
+    }
+  } else {
+    /* Backward compatibility for links generated before the live-link update. */
+    custData = payload;
   }
 
   renderCustomerHeader();
@@ -794,6 +837,7 @@ function renderCustomerHeader() {
     'Bakıdadır':'bg-emerald-100 text-emerald-800 border-emerald-200',
   };
   const sc = statusColors[d.s] || 'bg-slate-100 text-slate-700 border-slate-200';
+  const dateRow = (label, value) => value ? `<div class="flex justify-between gap-3"><span class="text-slate-400">${label}</span><span class="font-mono font-bold text-slate-700">${value}</span></div>` : '';
   document.getElementById('cust-car-header').innerHTML = `
     <div class="flex items-start justify-between gap-3">
       <div>
@@ -803,7 +847,17 @@ function renderCustomerHeader() {
       </div>
       <span class="text-[11px] font-bold px-3 py-1.5 rounded-full border shrink-0 ${sc}">${d.s || '-'}</span>
     </div>
-    ${d.t ? `<p class="text-[11px] text-slate-400 font-medium pt-1">📅 Yüklənmə Tarixi: ${d.t}</p>` : ''}
+    <div class="border-t border-slate-200 pt-2 mt-2 space-y-1.5 text-[11px]">
+      ${dateRow('Uduş tarixi:', d.udus || d.t)}
+      ${dateRow('Anbara giriş:', d.anbar)}
+      ${dateRow('Poti gəlişi:', d.poti)}
+      ${dateRow('Bakı çatdırılması:', d.baki)}
+      ${d.location ? `<div class="flex justify-between gap-3"><span class="text-slate-400">Yerləşdiyi yer:</span><span class="font-semibold text-slate-700">${d.location}</span></div>` : ''}
+      <div class="flex flex-wrap gap-2 pt-1">
+        <span class="px-2 py-1 rounded-lg border ${d.etibarname ? 'bg-emerald-50 text-emerald-800 border-emerald-200' : 'bg-rose-50 text-rose-800 border-rose-200'}">${d.etibarname ? 'Etibarnamə verilib' : 'Etibarnamə gözlənilir'}</span>
+        <span class="px-2 py-1 rounded-lg border ${d.shippingPaid ? 'bg-emerald-50 text-emerald-800 border-emerald-200' : 'bg-amber-50 text-amber-800 border-amber-200'}">${d.shippingPaid ? 'Yol pulu ödənilib' : 'Yol pulu gözlənilir'}</span>
+      </div>
+    </div>
   `;
 }
 
@@ -830,6 +884,10 @@ function setCustTab(tab) {
   renderCustomerPhotos();
 }
 
+function getCustomerPhotoUrl(photo) {
+  return typeof photo === 'string' ? photo : (photo && (photo.url || photo.thumb)) || '';
+}
+
 function renderCustomerPhotos() {
   const ph = custData.ph || {};
   const photos = ph[custTab] || [];
@@ -851,7 +909,9 @@ function renderCustomerPhotos() {
 
   area.innerHTML = `
     <div class="grid grid-cols-2 sm:grid-cols-3 gap-2.5">
-      ${photos.map((url, i) => `
+      ${photos.map((photo, i) => {
+        const url = getCustomerPhotoUrl(photo);
+        return `
         <div class="relative group rounded-2xl overflow-hidden shadow-sm border border-slate-200" onclick="openLightbox(${i})">
           <img src="${url}" alt="Şəkil ${i+1}" class="photo-thumb w-full" loading="lazy"
             onerror="this.parentElement.innerHTML='<div class=\'aspect-square bg-slate-100 flex items-center justify-center rounded-2xl\'><i class=\'fa-solid fa-image text-slate-400 text-2xl\'></i></div>'">
