@@ -762,63 +762,20 @@ window.addEventListener('DOMContentLoaded', async () => {
 /* ============================
    CUSTOMER PANEL
    ============================ */
-async function initCustomerPanel(base64) {
-  const panel = document.getElementById('customer-panel');
-  const showCustomerError = (title, message) => {
-    panel.innerHTML = `
+function initCustomerPanel(base64) {
+  try {
+    const json = decodeURIComponent(atob(base64));
+    custData = JSON.parse(json);
+  } catch(e) {
+    document.getElementById('customer-panel').innerHTML = `
       <div class="min-h-screen flex items-center justify-center p-8 text-center">
         <div>
           <div class="text-5xl mb-4">⚠️</div>
-          <h2 class="text-xl font-bold text-slate-800 mb-2">${title}</h2>
-          <p class="text-sm text-slate-500">${message}</p>
+          <h2 class="text-xl font-bold text-slate-800 mb-2">Keçərsiz Link</h2>
+          <p class="text-sm text-slate-500">Bu link yanlış və ya müddəti bitmiş ola bilər.</p>
         </div>
       </div>`;
-  };
-
-  panel.querySelector('#cust-car-header').innerHTML = `
-    <div class="flex items-center justify-center gap-2 py-5 text-sm text-slate-500 font-semibold">
-      <i class="fa-solid fa-spinner fa-spin text-indigo-600"></i> Məlumatlar yenilənir...
-    </div>`;
-
-  let payload;
-  try {
-    payload = JSON.parse(decodeURIComponent(atob(base64)));
-  } catch(e) {
-    showCustomerError('Keçərsiz Link', 'Bu link yanlış və ya müddəti bitmiş ola bilər.');
     return;
-  }
-
-  /* New links contain only the car id. The actual record is read every time. */
-  if (payload && payload.id !== undefined && payload.id !== null) {
-    try {
-      const response = await fetch(`${JSONBIN_BASE}${BIN_ID}/latest`, {
-        headers: { 'X-Master-Key': MASTER_KEY, 'Cache-Control': 'no-cache' }
-      });
-      if (!response.ok) throw new Error(`Cloud xətası: ${response.status}`);
-      const result = await response.json();
-      const remote = result && result.record ? result.record : result;
-      const liveCars = normalizeCars(remote);
-      const liveCar = liveCars.find(car => String(car.id) === String(payload.id));
-      if (!liveCar) {
-        showCustomerError('Avtomobil tapılmadı', 'Bu avtomobil silinmiş və ya link artıq aktiv deyil.');
-        return;
-      }
-      custData = {
-        n: liveCar.owner || '', m: liveCar.model || '', v: liveCar.vin || '',
-        s: liveCar.status || '', t: liveCar.udus || '',
-        udus: liveCar.udus || '', anbar: liveCar.anbar || '',
-        poti: liveCar.poti || '', baki: liveCar.baki || '',
-        location: liveCar.location || '', shippingPort: liveCar.shippingPort || '',
-        etibarname: !!liveCar.etibarname, shippingPaid: !!liveCar.shippingPaid,
-        ph: liveCar.photos || { pikap: [], anbar: [], sonTehvil: [] }
-      };
-    } catch(e) {
-      showCustomerError('Məlumat yüklənmədi', 'Canlı məlumatları almaq mümkün olmadı. Zəhmət olmasa linki yenidən açın.');
-      return;
-    }
-  } else {
-    /* Backward compatibility for links generated before the live-link update. */
-    custData = payload;
   }
 
   renderCustomerHeader();
@@ -837,7 +794,6 @@ function renderCustomerHeader() {
     'Bakıdadır':'bg-emerald-100 text-emerald-800 border-emerald-200',
   };
   const sc = statusColors[d.s] || 'bg-slate-100 text-slate-700 border-slate-200';
-  const dateRow = (label, value) => value ? `<div class="flex justify-between gap-3"><span class="text-slate-400">${label}</span><span class="font-mono font-bold text-slate-700">${value}</span></div>` : '';
   document.getElementById('cust-car-header').innerHTML = `
     <div class="flex items-start justify-between gap-3">
       <div>
@@ -847,17 +803,7 @@ function renderCustomerHeader() {
       </div>
       <span class="text-[11px] font-bold px-3 py-1.5 rounded-full border shrink-0 ${sc}">${d.s || '-'}</span>
     </div>
-    <div class="border-t border-slate-200 pt-2 mt-2 space-y-1.5 text-[11px]">
-      ${dateRow('Uduş tarixi:', d.udus || d.t)}
-      ${dateRow('Anbara giriş:', d.anbar)}
-      ${dateRow('Poti gəlişi:', d.poti)}
-      ${dateRow('Bakı çatdırılması:', d.baki)}
-      ${d.location ? `<div class="flex justify-between gap-3"><span class="text-slate-400">Yerləşdiyi yer:</span><span class="font-semibold text-slate-700">${d.location}</span></div>` : ''}
-      <div class="flex flex-wrap gap-2 pt-1">
-        <span class="px-2 py-1 rounded-lg border ${d.etibarname ? 'bg-emerald-50 text-emerald-800 border-emerald-200' : 'bg-rose-50 text-rose-800 border-rose-200'}">${d.etibarname ? 'Etibarnamə verilib' : 'Etibarnamə gözlənilir'}</span>
-        <span class="px-2 py-1 rounded-lg border ${d.shippingPaid ? 'bg-emerald-50 text-emerald-800 border-emerald-200' : 'bg-amber-50 text-amber-800 border-amber-200'}">${d.shippingPaid ? 'Yol pulu ödənilib' : 'Yol pulu gözlənilir'}</span>
-      </div>
-    </div>
+    ${d.t ? `<p class="text-[11px] text-slate-400 font-medium pt-1">📅 Yüklənmə Tarixi: ${d.t}</p>` : ''}
   `;
 }
 
@@ -884,10 +830,6 @@ function setCustTab(tab) {
   renderCustomerPhotos();
 }
 
-function getCustomerPhotoUrl(photo) {
-  return typeof photo === 'string' ? photo : (photo && (photo.url || photo.thumb)) || '';
-}
-
 function renderCustomerPhotos() {
   const ph = custData.ph || {};
   const photos = ph[custTab] || [];
@@ -909,9 +851,7 @@ function renderCustomerPhotos() {
 
   area.innerHTML = `
     <div class="grid grid-cols-2 sm:grid-cols-3 gap-2.5">
-      ${photos.map((photo, i) => {
-        const url = getCustomerPhotoUrl(photo);
-        return `
+      ${photos.map((url, i) => `
         <div class="relative group rounded-2xl overflow-hidden shadow-sm border border-slate-200" onclick="openLightbox(${i})">
           <img src="${url}" alt="Şəkil ${i+1}" class="photo-thumb w-full" loading="lazy"
             onerror="this.parentElement.innerHTML='<div class=\'aspect-square bg-slate-100 flex items-center justify-center rounded-2xl\'><i class=\'fa-solid fa-image text-slate-400 text-2xl\'></i></div>'">
@@ -1110,21 +1050,20 @@ function renderPhotoTabContent() {
       <div class="flex items-center justify-between mb-3">
         <h4 class="text-xs font-bold text-slate-700">Yüklənmiş Şəkillər (${photos.length})</h4>
       </div>
-      <div class="grid grid-cols-2 sm:grid-cols-3 gap-2.5">
+      <div class="grid grid-cols-3 sm:grid-cols-4 gap-2">
         ${photos.map((p, i) => {
           const url = typeof p === 'string' ? p : p.url;
           const date = typeof p === 'object' && p.date ? p.date : '';
           return `
-            <div class="relative group rounded-2xl overflow-hidden shadow-sm border border-slate-200" onclick="openAdminLightbox(${i})">
+            <div class="relative group rounded-xl overflow-hidden border border-slate-200 shadow-sm">
               <img src="${url}" alt="Şəkil ${i+1}" class="photo-thumb w-full" loading="lazy"
-                onerror="this.parentElement.innerHTML='<div class=\'aspect-square bg-slate-100 flex items-center justify-center rounded-2xl\'><i class=\'fa-solid fa-image text-slate-400 text-2xl\'></i></div>'">
-              <div class="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition flex items-center justify-center">
-                <i class="fa-solid fa-expand text-white opacity-0 group-hover:opacity-100 transition text-xl"></i>
+                onerror="this.style.background='#f1f5f9'; this.style.display='flex'">
+              <div class="absolute inset-0 bg-black/0 group-hover:bg-black/40 transition flex items-start justify-end p-1.5">
+                <button onclick="deleteAdminPhoto(${i})" class="opacity-0 group-hover:opacity-100 transition w-7 h-7 bg-rose-600 text-white rounded-lg text-xs flex items-center justify-center shadow">
+                  <i class="fa-solid fa-trash"></i>
+                </button>
               </div>
-              <button onclick="event.stopPropagation(); deleteAdminPhoto(${i})" class="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition w-7 h-7 bg-rose-600 text-white rounded-lg text-xs flex items-center justify-center shadow">
-                <i class="fa-solid fa-trash"></i>
-              </button>
-              <span class="absolute bottom-2 right-2 bg-black/50 text-white text-[10px] font-bold px-2 py-0.5 rounded-full">${i+1}/${photos.length}${date ? ' • ' + date : ''}</span>
+              ${date ? `<div class="absolute bottom-0 left-0 right-0 bg-black/50 text-white text-[9px] text-center py-0.5 font-mono">${date}</div>` : ''}
             </div>`;
         }).join('')}
       </div>
@@ -1196,19 +1135,6 @@ async function uploadToImgBB(file) {
   };
 }
 
-function openAdminLightbox(index) {
-  const car = cars.find(c => c.id === currentPhotoCarId);
-  if (!car) return;
-  const ph = car.photos || {};
-  const photos = ph[currentPhotoTab] || [];
-  lbPhotos = photos.map(p => typeof p === 'string' ? p : (p && (p.url || p.thumb)) || '');
-  lbIndex  = index;
-  document.getElementById('lightbox').classList.remove('hidden');
-  document.body.style.overflow = 'hidden';
-  document.getElementById('lb-dl-btn').classList.remove('hidden');
-  renderLightbox();
-}
-
 async function deleteAdminPhoto(index) {
   if (!currentPhotoCarId) return;
   const car = cars.find(c => c.id === currentPhotoCarId);
@@ -1228,10 +1154,24 @@ function openLinkModal(carId) {
   const car = cars.find(c => c.id === carId);
   if (!car) return;
 
-  /* Only the car id is encoded now. initCustomerPanel() fetches the live
-     record from JSONBin every time the link is opened, so the customer
-     always sees the latest dates, etibarnamə/yol pulu status and photos. */
-  const payload = { id: car.id };
+  const ph = car.photos || {};
+  const minPh = {
+    pikap:     (ph.pikap     || []).map(p => typeof p === 'string' ? p : p.url),
+    anbar:     (ph.anbar     || []).map(p => typeof p === 'string' ? p : p.url),
+    sonTehvil: (ph.sonTehvil || []).map(p => typeof p === 'string' ? p : p.url),
+  };
+
+  const today = new Date();
+  const dateStr = `${String(today.getDate()).padStart(2,'0')}.${String(today.getMonth()+1).padStart(2,'0')}.${today.getFullYear()}`;
+
+  const payload = {
+    n: car.owner || '',
+    m: car.model || '',
+    v: car.vin   || '',
+    s: car.status || '',
+    t: dateStr,
+    ph: minPh
+  };
 
   const encoded = btoa(encodeURIComponent(JSON.stringify(payload)));
   const link    = `${window.location.origin}${window.location.pathname}?data=${encoded}`;
