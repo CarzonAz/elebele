@@ -81,7 +81,7 @@ body{font-family:'Plus Jakarta Sans',sans-serif;background:#f1f5f9;color:#0f172a
   <span id="toast-msg" class="text-sm font-medium leading-snug"></span>
 </div>
 
-<!-- ===================== CUSTOMER PANEL (?t= URL) ===================== -->
+<!-- ===================== CUSTOMER PANEL ===================== -->
 <div id="customer-panel" class="hidden min-h-screen bg-slate-50">
 
   <div class="bg-white/95 backdrop-blur border-b border-slate-200 sticky top-0 z-40 shadow-sm">
@@ -90,7 +90,7 @@ body{font-family:'Plus Jakarta Sans',sans-serif;background:#f1f5f9;color:#0f172a
         <div class="bg-red-600 p-2.5 rounded-xl text-white font-black text-lg"><i class="fa-solid fa-car-side"></i></div>
         <div>
           <h1 class="text-xl font-black tracking-tight text-slate-900">CAR<span class="text-red-600">ZON</span></h1>
-          <p class="text-[11px] text-slate-500 font-semibold">Avtomobil Şəkil Hesabatı</p>
+          <p class="text-[11px] text-slate-500 font-semibold">Avtomobil Şəkil & Video Hesabatı</p>
         </div>
       </div>
       <div id="cust-car-header" class="bg-slate-50 border border-slate-200 p-3 rounded-2xl space-y-2"></div>
@@ -108,7 +108,7 @@ body{font-family:'Plus Jakarta Sans',sans-serif;background:#f1f5f9;color:#0f172a
         <i class="fa-solid fa-box-archive"></i> Bütün Şəkilləri ZIP Yüklə
       </button>
     </div>
-    <p class="text-center text-xs text-slate-400 font-medium pb-4">Carzone Logistika • Müştəri Şəkil Paneli</p>
+    <p class="text-center text-xs text-slate-400 font-medium pb-4">Carzone Logistika • Müştəri Paneli</p>
   </div>
 
   <div id="lightbox" class="hidden fixed inset-0 z-[100] bg-black flex flex-col select-none">
@@ -286,8 +286,8 @@ body{font-family:'Plus Jakarta Sans',sans-serif;background:#f1f5f9;color:#0f172a
       <div class="flex items-center gap-3">
         <div class="p-2.5 bg-indigo-100 text-indigo-600 rounded-2xl border border-indigo-200"><i class="fa-solid fa-images text-lg"></i></div>
         <div>
-          <h3 class="text-base font-bold text-slate-900" id="photo-modal-title">Şəkil İdarəetməsi</h3>
-          <p class="text-[11px] text-slate-500">ImgBB vasitəsilə kateqoriyalara görə şəkil yüklənir</p>
+          <h3 class="text-base font-bold text-slate-900" id="photo-modal-title">Media İdarəetməsi</h3>
+          <p class="text-[11px] text-slate-500">Cloudinary — şəkil + video yükləmə</p>
         </div>
       </div>
       <button onclick="closePhotoModal()" class="text-slate-400 hover:text-slate-700 text-xl"><i class="fa-solid fa-xmark"></i></button>
@@ -316,7 +316,7 @@ body{font-family:'Plus Jakarta Sans',sans-serif;background:#f1f5f9;color:#0f172a
       <div class="w-12 h-12 bg-emerald-100 text-emerald-600 rounded-2xl flex items-center justify-center text-xl border border-emerald-200"><i class="fa-solid fa-link"></i></div>
       <div>
         <h3 class="text-base font-bold text-slate-900">Müştəri Linki Hazır!</h3>
-        <p class="text-xs text-slate-500">Bu linkdə yüklənmiş bütün şəkillər öz-özünə göstərilir</p>
+        <p class="text-xs text-slate-500">Bu linkdə yüklənmiş bütün media göstərilir</p>
       </div>
     </div>
     <div class="bg-slate-50 border border-slate-200 rounded-2xl p-3 flex items-center gap-2">
@@ -326,7 +326,7 @@ body{font-family:'Plus Jakarta Sans',sans-serif;background:#f1f5f9;color:#0f172a
       </button>
     </div>
     <div class="bg-indigo-50 border border-indigo-100 p-3 rounded-2xl text-xs text-indigo-800 font-medium leading-relaxed">
-      💡 <strong>Bu linki WhatsApp, SMS və ya e-mail ilə müştəriyə göndərin.</strong> Link unikal və təhlükəsiz koddan ibarətdir, başqa heç kim bu linki təxmin edə bilməz.
+      💡 <strong>Bu linki WhatsApp, SMS və ya e-mail ilə müştəriyə göndərin.</strong> Link unikal və təhlükəsiz koddan ibarətdir.
     </div>
     <div class="flex gap-2">
       <button onclick="shareViaWhatsApp()" class="flex-1 py-2.5 bg-[#25D366] hover:bg-[#1ebe58] text-white rounded-xl text-xs font-bold flex items-center justify-center gap-2 transition">
@@ -632,9 +632,10 @@ body{font-family:'Plus Jakarta Sans',sans-serif;background:#f1f5f9;color:#0f172a
 <!-- ===================== JAVASCRIPT ===================== -->
 <script>
 /* ============================
-   KONFİQURASİYA (yalnız public açar qalıb)
+   KONFİQURASİYA
    ============================ */
-const IMGBB_API_KEY = '6c3e43b6e16dcf44b220df88a5f2d592';
+const CLOUD_NAME    = 'u29az1iv';
+const UPLOAD_PRESET = 'AuctionLand';
 
 /* ============================
    STATE
@@ -659,11 +660,10 @@ let lbTouchStart = 0;
 
 let adminLbPhotos = [], adminLbIdx = 0;
 
-/* Session token — serverdən gələn */
 let sessionToken = sessionStorage.getItem('cz_token') || '';
 
 /* ============================
-   SHARE TOKEN UTIL
+   SHARE TOKEN
    ============================ */
 function generateShareToken() {
   const arr = new Uint8Array(16);
@@ -679,24 +679,18 @@ window.addEventListener('DOMContentLoaded', async () => {
   const dataParam  = params.get('data');
   const tokenParam = params.get('t');
 
-  /* === MÜŞTƏRİ REJİMİ === */
   if (dataParam || tokenParam) {
     document.getElementById('admin-panel').classList.add('hidden');
     document.getElementById('lockScreen').classList.add('hidden');
     document.getElementById('customer-panel').classList.remove('hidden');
-    if (dataParam) {
-      initCustomerPanel(dataParam);
-    } else {
-      await initCustomerPanelByToken(tokenParam);
-    }
+    if (dataParam) initCustomerPanel(dataParam);
+    else await initCustomerPanelByToken(tokenParam);
     return;
   }
 
-  /* === ADMİN REJİMİ === */
   document.getElementById('admin-panel').classList.add('hidden');
   document.getElementById('customer-panel').classList.add('hidden');
 
-  /* Session token varsa → birbaşa panel */
   if (sessionToken) {
     isAdminLoggedIn = true;
     document.getElementById('lockScreen').classList.add('hidden');
@@ -708,7 +702,6 @@ window.addEventListener('DOMContentLoaded', async () => {
     setTimeout(() => document.getElementById('lock-pin-input').focus(), 150);
   }
 
-  /* Lock input hadisələri */
   const lockInput = document.getElementById('lock-pin-input');
   lockInput.addEventListener('input', e => {
     e.target.value = e.target.value.replace(/\D/g,'').slice(0,4);
@@ -719,11 +712,9 @@ window.addEventListener('DOMContentLoaded', async () => {
   });
   document.getElementById('lock-submit-btn').addEventListener('click', verifyLockPin);
 
-  /* Tracking companies */
   loadTrackingCompanies();
   renderTrackingCompanySelect();
 
-  /* Doc input */
   const docInput = document.getElementById('doc-file-input');
   if (docInput) {
     docInput.addEventListener('change', e => {
@@ -740,7 +731,6 @@ window.addEventListener('DOMContentLoaded', async () => {
     });
   }
 
-  /* Lightbox */
   document.addEventListener('keydown', e => {
     const lb = document.getElementById('lightbox');
     if (!lb.classList.contains('hidden')) {
@@ -816,21 +806,61 @@ function lockAdminPanel() {
 }
 
 /* ============================
-   CUSTOMER PANEL (?data=)
+   CLOUDINARY UPLOAD
+   ============================ */
+async function uploadToCloudinary(file, mediaType = 'image') {
+  const formData = new FormData();
+  formData.append('file', file);
+  formData.append('upload_preset', UPLOAD_PRESET);
+
+  const resourceType = mediaType === 'video' ? 'video' : 'image';
+  const url = `https://api.cloudinary.com/v1_1/${CLOUD_NAME}/${resourceType}/upload`;
+
+  const resp = await fetch(url, { method: 'POST', body: formData });
+  if (!resp.ok) {
+    const err = await resp.json().catch(() => ({}));
+    throw new Error(err.error?.message || `Cloudinary xətası: ${resp.status}`);
+  }
+  const data = await resp.json();
+
+  let thumb;
+  if (mediaType === 'video') {
+    thumb = data.secure_url
+      .replace('/video/upload/', '/video/upload/so_0,w_400/')
+      .replace(/\.[^.]+$/, '.jpg');
+  } else {
+    thumb = data.secure_url.replace('/image/upload/', '/image/upload/w_400/');
+  }
+
+  return {
+    url: data.secure_url,
+    thumb: thumb,
+    publicId: data.public_id,
+    resourceType: resourceType,
+    mediaType: mediaType,
+    duration: data.duration || null,
+  };
+}
+
+function getVideoThumb(videoUrl) {
+  if (!videoUrl) return '';
+  if (videoUrl.includes('/video/upload/')) {
+    return videoUrl
+      .replace('/video/upload/', '/video/upload/so_0,w_400/')
+      .replace(/\.[^.]+$/, '.jpg');
+  }
+  return videoUrl;
+}
+
+/* ============================
+   CUSTOMER PANEL
    ============================ */
 function initCustomerPanel(base64) {
   try {
     const json = decodeURIComponent(atob(base64));
     custData = JSON.parse(json);
   } catch(e) {
-    document.getElementById('customer-panel').innerHTML = `
-      <div class="min-h-screen flex items-center justify-center p-8 text-center">
-        <div>
-          <div class="text-5xl mb-4">⚠️</div>
-          <h2 class="text-xl font-bold text-slate-800 mb-2">Keçərsiz Link</h2>
-          <p class="text-sm text-slate-500">Bu link yanlış və ya müddəti bitmiş ola bilər.</p>
-        </div>
-      </div>`;
+    document.getElementById('customer-panel').innerHTML = `<div class="min-h-screen flex items-center justify-center p-8 text-center"><div><div class="text-5xl mb-4">⚠️</div><h2 class="text-xl font-bold text-slate-800 mb-2">Keçərsiz Link</h2></div></div>`;
     return;
   }
   renderCustomerHeader();
@@ -838,9 +868,6 @@ function initCustomerPanel(base64) {
   renderCustomerPhotos();
 }
 
-/* ============================
-   CUSTOMER PANEL (?t=)
-   ============================ */
 async function initCustomerPanelByToken(token) {
   document.getElementById('cust-car-header').innerHTML = `
     <div class="flex items-center gap-3 py-2">
@@ -856,19 +883,38 @@ async function initCustomerPanelByToken(token) {
     if (!r.ok) throw new Error(`Xəta: ${r.status}`);
     const { car } = await r.json();
 
-    const ph = car.photos || { pikap: [], anbar: [], poti: [] };
-    const today = new Date();
-    const dateStr = `${String(today.getDate()).padStart(2,'0')}.${String(today.getMonth()+1).padStart(2,'0')}.${today.getFullYear()}`;
+    const ph = car.photos || {};
+    const normalizeCat = (cat) => {
+      if (Array.isArray(cat)) return { images: cat, videos: [] };
+      return { images: cat?.images || [], videos: cat?.videos || [] };
+    };
+    const catPikap = normalizeCat(ph.pikap);
+    const catAnbar = normalizeCat(ph.anbar);
+    const catPoti  = normalizeCat(ph.poti);
+
+    const mapVid = (v) => {
+      if (typeof v === 'string') return { url: v, thumb: getVideoThumb(v) };
+      return { url: v.url, thumb: v.thumb || getVideoThumb(v.url) };
+    };
 
     custData = {
-      n: car.owner, m: car.model, v: car.vin, s: car.status, t: dateStr,
+      n: car.owner, m: car.model, v: car.vin, s: car.status,
       udus: car.udus, anbar: car.anbar, poti: car.poti, baki: car.baki,
       etibarname: car.etibarname, shippingPaid: car.shippingPaid,
       location: car.location, shippingPort: car.shippingPort, container: car.container,
       ph: {
-        pikap: (ph.pikap || []).map(p => typeof p === 'string' ? p : p.url),
-        anbar: (ph.anbar || []).map(p => typeof p === 'string' ? p : p.url),
-        poti:  (ph.poti  || []).map(p => typeof p === 'string' ? p : p.url),
+        pikap: {
+          images: catPikap.images.map(p => typeof p === 'string' ? p : p.url),
+          videos: catPikap.videos.map(mapVid),
+        },
+        anbar: {
+          images: catAnbar.images.map(p => typeof p === 'string' ? p : p.url),
+          videos: catAnbar.videos.map(mapVid),
+        },
+        poti: {
+          images: catPoti.images.map(p => typeof p === 'string' ? p : p.url),
+          videos: catPoti.videos.map(mapVid),
+        },
       }
     };
 
@@ -968,10 +1014,12 @@ function renderCustomerHeader() {
 
 function renderCustomerTabs() {
   const ph = custData.ph || {};
+  const totalVideos = (ph.pikap?.videos?.length || 0) + (ph.anbar?.videos?.length || 0) + (ph.poti?.videos?.length || 0);
   const tabs = [
-    { key: 'pikap', label: '📦 Pikap', count: (ph.pikap || []).length },
-    { key: 'anbar', label: '🏭 Anbar', count: (ph.anbar || []).length },
-    { key: 'poti',  label: '🇬🇪 Poti',  count: (ph.poti  || []).length },
+    { key: 'pikap',   label: '📦 Pikap',   count: (ph.pikap?.images?.length || 0) + (ph.pikap?.videos?.length || 0) },
+    { key: 'anbar',   label: '🏭 Anbar',   count: (ph.anbar?.images?.length || 0) + (ph.anbar?.videos?.length || 0) },
+    { key: 'poti',    label: '🇬🇪 Poti',    count: (ph.poti?.images?.length || 0) + (ph.poti?.videos?.length || 0) },
+    { key: 'videolar',label: '🎬 Videolar', count: totalVideos },
   ];
   document.getElementById('cust-tabs').innerHTML = tabs.map(t => `
     <button onclick="setCustTab('${t.key}')" id="ctab-${t.key}"
@@ -991,41 +1039,120 @@ function setCustTab(tab) {
 
 function renderCustomerPhotos() {
   const ph = custData.ph || {};
-  const photos = ph[custTab] || [];
   const area = document.getElementById('cust-photo-area');
   const dlBar = document.getElementById('cust-dl-bar');
 
-  const hasAny = Object.values(ph).some(a => a && a.length > 0);
+  const hasAny = ['pikap','anbar','poti'].some(k => (ph[k]?.images?.length || 0) + (ph[k]?.videos?.length || 0) > 0);
   if (hasAny) dlBar.classList.remove('hidden');
 
-  if (photos.length === 0) {
+  if (custTab === 'videolar') {
+    return renderCustomerAllVideos();
+  }
+
+  const cat = ph[custTab] || { images: [], videos: [] };
+  const images = cat.images || [];
+  const videos = cat.videos || [];
+
+  if (images.length === 0 && videos.length === 0) {
     area.innerHTML = `
       <div class="bg-white border border-slate-200 rounded-2xl p-10 text-center">
         <div class="text-4xl mb-3">📷</div>
-        <h3 class="text-sm font-bold text-slate-700">Bu kateqoriyada hələ şəkil yoxdur</h3>
+        <h3 class="text-sm font-bold text-slate-700">Bu kateqoriyada hələ media yoxdur</h3>
         <p class="text-xs text-slate-400 mt-1">Admin tərəfindən yüklənəndə burada görünəcək.</p>
       </div>`;
     return;
   }
 
   area.innerHTML = `
-    <div class="grid grid-cols-2 sm:grid-cols-3 gap-2.5">
-      ${photos.map((url, i) => `
-        <div class="relative group rounded-2xl overflow-hidden shadow-sm border border-slate-200" onclick="openLightbox(${i})">
-          <img src="${url}" alt="Şəkil ${i+1}" class="photo-thumb w-full" loading="lazy"
-            onerror="this.parentElement.innerHTML='<div class=\'aspect-square bg-slate-100 flex items-center justify-center rounded-2xl\'><i class=\'fa-solid fa-image text-slate-400 text-2xl\'></i></div>'">
-          <div class="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition flex items-center justify-center">
-            <i class="fa-solid fa-expand text-white opacity-0 group-hover:opacity-100 transition text-xl"></i>
+    ${images.length > 0 ? `
+    <div class="mb-5">
+      <h3 class="text-xs font-black uppercase tracking-widest text-slate-500 mb-2.5">📷 Şəkillər (${images.length})</h3>
+      <div class="grid grid-cols-2 sm:grid-cols-3 gap-2.5">
+        ${images.map((url, i) => `
+          <div class="relative group rounded-2xl overflow-hidden shadow-sm border border-slate-200" onclick="openLightbox(${i})">
+            <img src="${url}" alt="" class="photo-thumb w-full" loading="lazy">
+            <div class="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition flex items-center justify-center">
+              <i class="fa-solid fa-expand text-white opacity-0 group-hover:opacity-100 transition text-xl"></i>
+            </div>
+            <span class="absolute bottom-2 right-2 bg-black/50 text-white text-[10px] font-bold px-2 py-0.5 rounded-full">${i+1}/${images.length}</span>
           </div>
-          <span class="absolute bottom-2 right-2 bg-black/50 text-white text-[10px] font-bold px-2 py-0.5 rounded-full">${i+1}/${photos.length}</span>
-        </div>
-      `).join('')}
-    </div>`;
+        `).join('')}
+      </div>
+    </div>` : ''}
+
+    ${videos.length > 0 ? `
+    <div>
+      <h3 class="text-xs font-black uppercase tracking-widest text-slate-500 mb-2.5">🎬 Videolar (${videos.length})</h3>
+      <div class="grid grid-cols-2 gap-2.5">
+        ${videos.map((v, i) => {
+          const url = typeof v === 'string' ? v : v.url;
+          const thumb = typeof v === 'object' && v.thumb ? v.thumb : getVideoThumb(url);
+          return `
+            <div class="relative group rounded-2xl overflow-hidden shadow-sm border border-slate-200 cursor-pointer"
+                 onclick="openVideoPlayer('${url}')">
+              <img src="${thumb}" alt="" class="photo-thumb w-full" loading="lazy">
+              <div class="absolute inset-0 bg-black/30 flex items-center justify-center group-hover:bg-black/50 transition">
+                <i class="fa-solid fa-play text-white text-3xl drop-shadow-lg"></i>
+              </div>
+              <span class="absolute bottom-2 right-2 bg-black/50 text-white text-[10px] font-bold px-2 py-0.5 rounded-full">${i+1}/${videos.length}</span>
+            </div>
+          `;
+        }).join('')}
+      </div>
+    </div>` : ''}
+  `;
+}
+
+function renderCustomerAllVideos() {
+  const ph = custData.ph || {};
+  const area = document.getElementById('cust-photo-area');
+  const sections = [
+    { key: 'pikap', label: '📦 Pikap Videoları', videos: ph.pikap?.videos || [] },
+    { key: 'anbar', label: '🏭 Anbar Videoları', videos: ph.anbar?.videos || [] },
+    { key: 'poti',  label: '🇬🇪 Poti Videoları',  videos: ph.poti?.videos  || [] },
+  ];
+  const total = sections.reduce((s, x) => s + x.videos.length, 0);
+  if (total === 0) {
+    area.innerHTML = `
+      <div class="bg-white border border-slate-200 rounded-2xl p-10 text-center">
+        <div class="text-4xl mb-3">🎬</div>
+        <h3 class="text-sm font-bold text-slate-700">Hələ video yoxdur</h3>
+        <p class="text-xs text-slate-400 mt-1">Admin tərəfindən yüklənəndə burada görünəcək.</p>
+      </div>`;
+    return;
+  }
+  area.innerHTML = sections.filter(s => s.videos.length > 0).map(sec => `
+    <div class="mb-6">
+      <h3 class="text-xs font-black uppercase tracking-widest text-slate-600 mb-3 flex items-center gap-2">
+        ${sec.label}
+        <span class="bg-slate-200 text-slate-700 text-[10px] px-2 py-0.5 rounded-full">${sec.videos.length}</span>
+      </h3>
+      <div class="grid grid-cols-2 gap-2.5">
+        ${sec.videos.map((v, i) => {
+          const url = typeof v === 'string' ? v : v.url;
+          const thumb = typeof v === 'object' && v.thumb ? v.thumb : getVideoThumb(url);
+          return `
+            <div class="relative group rounded-2xl overflow-hidden shadow-sm border border-slate-200 cursor-pointer"
+                 onclick="openVideoPlayer('${url}')">
+              <img src="${thumb}" alt="" class="photo-thumb w-full" loading="lazy">
+              <div class="absolute inset-0 bg-black/30 flex items-center justify-center group-hover:bg-black/50 transition">
+                <i class="fa-solid fa-play text-white text-3xl drop-shadow-lg"></i>
+              </div>
+              <span class="absolute bottom-2 right-2 bg-black/50 text-white text-[10px] font-bold px-2 py-0.5 rounded-full">${i+1}/${sec.videos.length}</span>
+            </div>`;
+        }).join('')}
+      </div>
+    </div>
+  `).join('');
+}
+
+function openVideoPlayer(url) {
+  window.open(url, '_blank');
 }
 
 function openLightbox(index) {
   const ph = custData.ph || {};
-  lbPhotos = ph[custTab] || [];
+  lbPhotos = ph[custTab]?.images || [];
   lbIndex  = index;
   adminLbPhotos = [];
   document.getElementById('lightbox').classList.remove('hidden');
@@ -1051,7 +1178,7 @@ function lbPrev() {
 }
 
 function renderLightbox() {
-  document.getElementById('lb-img').src    = lbPhotos[lbIndex];
+  document.getElementById('lb-img').src = lbPhotos[lbIndex];
   document.getElementById('lb-counter').textContent = `${lbIndex + 1} / ${lbPhotos.length}`;
   const dotsEl = document.getElementById('lb-dots');
   dotsEl.innerHTML = lbPhotos.map((_, i) =>
@@ -1084,20 +1211,26 @@ async function lbDownloadCurrent() {
 
 async function custDownloadTabZip() {
   const ph = custData.ph || {};
-  const photos = ph[custTab] || [];
+  if (custTab === 'videolar') { showToast('Videolar ZIP kimi yüklənə bilməz!', 'info'); return; }
+  const photos = ph[custTab]?.images || [];
   if (!photos.length) { showToast('Bu kateqoriyada şəkil yoxdur!', 'error'); return; }
   await downloadPhotosAsZip({ [custTab]: photos }, `${custData.m || 'Avtomobil'}_${custTab}`);
 }
 
 async function custDownloadAllZip() {
   const ph = custData.ph || {};
-  const hasAny = Object.values(ph).some(a => a && a.length > 0);
+  const all = {
+    pikap: ph.pikap?.images || [],
+    anbar: ph.anbar?.images || [],
+    poti:  ph.poti?.images || [],
+  };
+  const hasAny = Object.values(all).some(a => a.length > 0);
   if (!hasAny) { showToast('Heç bir şəkil yoxdur!', 'error'); return; }
-  await downloadPhotosAsZip(ph, custData.m || 'Avtomobil');
+  await downloadPhotosAsZip(all, custData.m || 'Avtomobil');
 }
 
 async function downloadPhotosAsZip(photosByCategory, baseName) {
-  showToast('ZIP hazırlanır, zəhmət olmasa gözləyin...', 'info');
+  showToast('ZIP hazırlanır...', 'info');
   const zip = new JSZip();
   const catNames = { pikap: 'Pikap', anbar: 'Anbar', poti: 'Poti' };
   let total = 0;
@@ -1116,7 +1249,7 @@ async function downloadPhotosAsZip(photosByCategory, baseName) {
     }
   }
 
-  if (!total) { showToast('Şəkillər yüklənə bilmədi (CORS məhdudiyyəti).', 'error'); return; }
+  if (!total) { showToast('Şəkillər yüklənə bilmədi.', 'error'); return; }
 
   const content = await zip.generateAsync({ type: 'blob' });
   saveAs(content, `${baseName}-Şəkillər.zip`);
@@ -1124,14 +1257,14 @@ async function downloadPhotosAsZip(photosByCategory, baseName) {
 }
 
 /* ============================
-   PHOTO MANAGEMENT (Admin)
+   PHOTO/MEDIA MANAGEMENT (Admin)
    ============================ */
 function openPhotoModal(carId) {
   currentPhotoCarId = carId;
   currentPhotoTab   = 'pikap';
   const car = cars.find(c => c.id === carId);
   if (!car) return;
-  document.getElementById('photo-modal-title').textContent = car.model || 'Şəkil İdarəetməsi';
+  document.getElementById('photo-modal-title').textContent = car.model || 'Media İdarəetməsi';
   document.getElementById('photoModal').classList.remove('hidden');
   renderPhotoStatusRow(car);
   setPhotoTab('pikap');
@@ -1166,10 +1299,12 @@ function renderPhotoStatusRow(car) {
   document.getElementById('photo-status-row').innerHTML = `
     <div class="flex flex-wrap gap-2 pb-1">
       ${cats.map(c => {
-        const count = (ph[c.key] || []).length;
-        const ok = count > 0;
+        const cat = ph[c.key] || {};
+        const imgCount = (cat.images || []).length;
+        const vidCount = (cat.videos || []).length;
+        const ok = imgCount > 0 || vidCount > 0;
         return `<span class="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold border ${ok ? 'bg-emerald-50 text-emerald-800 border-emerald-200' : 'bg-rose-50 text-rose-700 border-rose-200'}">
-          <span>${ok ? '🟢' : '🔴'}</span> ${c.icon} ${c.label}: ${ok ? count + ' şəkil' : 'Yoxdur'}
+          <span>${ok ? '🟢' : '🔴'}</span> ${c.icon} ${c.label}: 📷${imgCount} 🎬${vidCount}
         </span>`;
       }).join('')}
     </div>`;
@@ -1178,45 +1313,86 @@ function renderPhotoStatusRow(car) {
 function renderPhotoTabContent() {
   const car = cars.find(c => c.id === currentPhotoCarId);
   if (!car) return;
-  const ph = car.photos || {};
-  const photos = ph[currentPhotoTab] || [];
+  const catData = car.photos?.[currentPhotoTab] || { images: [], videos: [] };
+  const images = catData.images || [];
+  const videos = catData.videos || [];
   const tabContent = document.getElementById('photo-tab-content');
   const catLabel = { pikap: 'Pikap', anbar: 'Anbar', poti: 'Poti' }[currentPhotoTab];
 
   tabContent.innerHTML = `
-    <div class="drop-zone rounded-2xl p-5 text-center space-y-3" id="drop-zone">
+    <div class="drop-zone rounded-2xl p-5 text-center space-y-3" id="drop-zone-img">
       <div class="w-12 h-12 bg-indigo-100 text-indigo-600 rounded-2xl flex items-center justify-center text-xl mx-auto border border-indigo-200">
         <i class="fa-solid fa-cloud-arrow-up"></i>
       </div>
       <div>
-        <p class="text-sm font-bold text-slate-700">${catLabel} kateqoriyası üçün şəkil yüklə</p>
-        <p class="text-xs text-slate-400 mt-0.5">ImgBB-ə yüklənir • Çoxlu şəkil seçə bilərsiniz</p>
+        <p class="text-sm font-bold text-slate-700">${catLabel} — Şəkil Yüklə</p>
+        <p class="text-xs text-slate-400 mt-0.5">Cloudinary-ə yüklənir • Çoxlu şəkil seçə bilərsiniz</p>
       </div>
       <label class="inline-flex items-center gap-2 px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-bold cursor-pointer transition shadow-sm">
         <i class="fa-solid fa-image"></i> Şəkil Seç
-        <input type="file" multiple accept="image/*" class="hidden" id="photo-file-input" onchange="handlePhotoFileSelect(this.files)">
+        <input type="file" multiple accept="image/*" class="hidden" onchange="handlePhotoFileSelect(this.files, 'image')">
+      </label>
+    </div>
+
+    <div class="drop-zone rounded-2xl p-5 text-center space-y-3" id="drop-zone-vid">
+      <div class="w-12 h-12 bg-purple-100 text-purple-600 rounded-2xl flex items-center justify-center text-xl mx-auto border border-purple-200">
+        <i class="fa-solid fa-video"></i>
+      </div>
+      <div>
+        <p class="text-sm font-bold text-slate-700">${catLabel} — Video Yüklə</p>
+        <p class="text-xs text-slate-400 mt-0.5">MP4, MOV, WEBM • 100 MB-a qədər</p>
+      </div>
+      <label class="inline-flex items-center gap-2 px-5 py-2.5 bg-purple-600 hover:bg-purple-700 text-white rounded-xl text-xs font-bold cursor-pointer transition shadow-sm">
+        <i class="fa-solid fa-video"></i> Video Seç
+        <input type="file" multiple accept="video/*" class="hidden" onchange="handlePhotoFileSelect(this.files, 'video')">
       </label>
     </div>
 
     <div id="upload-progress" class="hidden bg-indigo-50 border border-indigo-200 rounded-2xl p-4 text-xs font-bold text-indigo-800 flex items-center gap-3">
       <i class="fa-solid fa-spinner fa-spin text-indigo-600"></i>
-      <span id="upload-progress-text">Şəkillər ImgBB-ə yüklənir...</span>
+      <span id="upload-progress-text">Yüklənir...</span>
     </div>
 
-    ${photos.length > 0 ? `
+    ${images.length > 0 ? `
     <div>
-      <div class="flex items-center justify-between mb-3">
-        <h4 class="text-xs font-bold text-slate-700">Yüklənmiş Şəkillər (${photos.length})</h4>
-      </div>
+      <h4 class="text-xs font-bold text-slate-700 mb-3">📷 Yüklənmiş Şəkillər (${images.length})</h4>
       <div class="grid grid-cols-3 sm:grid-cols-4 gap-2">
-        ${photos.map((p, i) => {
+        ${images.map((p, i) => {
           const url = typeof p === 'string' ? p : p.url;
           const date = typeof p === 'object' && p.date ? p.date : '';
           return `
             <div class="relative group rounded-xl overflow-hidden border border-slate-200 shadow-sm">
-              <img src="${url}" alt="Şəkil ${i+1}" class="photo-thumb w-full" loading="lazy">
+              <img src="${url}" alt="" class="photo-thumb w-full" loading="lazy">
               <div class="absolute inset-0 bg-black/0 group-hover:bg-black/40 transition flex items-start justify-end p-1.5">
-                <button onclick="deleteAdminPhoto(${i})" class="opacity-0 group-hover:opacity-100 transition w-7 h-7 bg-rose-600 text-white rounded-lg text-xs flex items-center justify-center shadow">
+                <button onclick="deleteAdminMedia('image', ${i})" class="opacity-0 group-hover:opacity-100 transition w-7 h-7 bg-rose-600 text-white rounded-lg text-xs flex items-center justify-center shadow">
+                  <i class="fa-solid fa-trash"></i>
+                </button>
+              </div>
+              ${date ? `<div class="absolute bottom-0 left-0 right-0 bg-black/50 text-white text-[9px] text-center py-0.5 font-mono">${date}</div>` : ''}
+            </div>`;
+        }).join('')}
+      </div>
+    </div>` : ''}
+
+    ${videos.length > 0 ? `
+    <div>
+      <h4 class="text-xs font-bold text-slate-700 mb-3">🎬 Yüklənmiş Videolar (${videos.length})</h4>
+      <div class="grid grid-cols-2 sm:grid-cols-3 gap-2">
+        ${videos.map((v, i) => {
+          const url = typeof v === 'string' ? v : v.url;
+          const thumb = getVideoThumb(url);
+          const date = typeof v === 'object' && v.date ? v.date : '';
+          const dur = typeof v === 'object' && v.duration ? Math.round(v.duration) + 's' : '';
+          return `
+            <div class="relative group rounded-xl overflow-hidden border border-slate-200 shadow-sm cursor-pointer"
+                 onclick="window.open('${url}', '_blank')">
+              <img src="${thumb}" alt="" class="photo-thumb w-full" loading="lazy">
+              <div class="absolute inset-0 bg-black/30 flex items-center justify-center">
+                <i class="fa-solid fa-play text-white text-2xl drop-shadow-lg"></i>
+              </div>
+              <div class="absolute top-1 right-1 flex gap-1">
+                ${dur ? `<span class="bg-black/60 text-white text-[9px] px-1.5 py-0.5 rounded font-mono">${dur}</span>` : ''}
+                <button onclick="event.stopPropagation(); deleteAdminMedia('video', ${i})" class="w-7 h-7 bg-rose-600 text-white rounded-lg text-xs flex items-center justify-center shadow opacity-0 group-hover:opacity-100 transition">
                   <i class="fa-solid fa-trash"></i>
                 </button>
               </div>
@@ -1227,19 +1403,29 @@ function renderPhotoTabContent() {
     </div>` : ''}
   `;
 
-  const dz = document.getElementById('drop-zone');
-  if (dz) {
-    dz.addEventListener('dragover', e => { e.preventDefault(); dz.classList.add('drag-over'); });
-    dz.addEventListener('dragleave', () => dz.classList.remove('drag-over'));
-    dz.addEventListener('drop', e => {
+  const dz1 = document.getElementById('drop-zone-img');
+  if (dz1) {
+    dz1.addEventListener('dragover', e => { e.preventDefault(); dz1.classList.add('drag-over'); });
+    dz1.addEventListener('dragleave', () => dz1.classList.remove('drag-over'));
+    dz1.addEventListener('drop', e => {
       e.preventDefault();
-      dz.classList.remove('drag-over');
-      if (e.dataTransfer.files.length) handlePhotoFileSelect(e.dataTransfer.files);
+      dz1.classList.remove('drag-over');
+      if (e.dataTransfer.files.length) handlePhotoFileSelect(e.dataTransfer.files, 'image');
+    });
+  }
+  const dz2 = document.getElementById('drop-zone-vid');
+  if (dz2) {
+    dz2.addEventListener('dragover', e => { e.preventDefault(); dz2.classList.add('drag-over'); });
+    dz2.addEventListener('dragleave', () => dz2.classList.remove('drag-over'));
+    dz2.addEventListener('drop', e => {
+      e.preventDefault();
+      dz2.classList.remove('drag-over');
+      if (e.dataTransfer.files.length) handlePhotoFileSelect(e.dataTransfer.files, 'video');
     });
   }
 }
 
-async function handlePhotoFileSelect(files) {
+async function handlePhotoFileSelect(files, mediaType = 'image') {
   if (!files || !files.length || !currentPhotoCarId) return;
   const progressEl = document.getElementById('upload-progress');
   const progressText = document.getElementById('upload-progress-text');
@@ -1247,17 +1433,31 @@ async function handlePhotoFileSelect(files) {
 
   const car = cars.find(c => c.id === currentPhotoCarId);
   if (!car) return;
-  if (!car.photos) car.photos = { pikap: [], anbar: [], poti: [] };
-  if (!car.photos[currentPhotoTab]) car.photos[currentPhotoTab] = [];
+  if (!car.photos) car.photos = { pikap: {images:[],videos:[]}, anbar: {images:[],videos:[]}, poti: {images:[],videos:[]} };
+  if (!car.photos[currentPhotoTab]) car.photos[currentPhotoTab] = { images: [], videos: [] };
+  if (!car.photos[currentPhotoTab].images) car.photos[currentPhotoTab].images = [];
+  if (!car.photos[currentPhotoTab].videos) car.photos[currentPhotoTab].videos = [];
+
+  const targetArr = mediaType === 'video'
+    ? car.photos[currentPhotoTab].videos
+    : car.photos[currentPhotoTab].images;
 
   let uploaded = 0;
   for (const file of Array.from(files)) {
     if (progressText) progressText.textContent = `Yüklənir ${uploaded + 1}/${files.length}... (${file.name})`;
     try {
-      const result = await uploadToImgBB(file);
+      const result = await uploadToCloudinary(file, mediaType);
       const today = new Date();
       const dateStr = `${String(today.getDate()).padStart(2,'0')}.${String(today.getMonth()+1).padStart(2,'0')}.${today.getFullYear()}`;
-      car.photos[currentPhotoTab].push({ url: result.url, thumb: result.thumb, deleteHash: result.deleteHash, date: dateStr });
+      targetArr.push({
+        url: result.url,
+        thumb: result.thumb,
+        publicId: result.publicId,
+        resourceType: result.resourceType,
+        mediaType: result.mediaType,
+        duration: result.duration,
+        date: dateStr
+      });
       uploaded++;
     } catch (err) {
       showToast(`❌ "${file.name}" yüklənmədi: ${err.message}`, 'error');
@@ -1266,63 +1466,46 @@ async function handlePhotoFileSelect(files) {
 
   if (progressEl) progressEl.classList.add('hidden');
   if (uploaded > 0) {
-    await saveData(`✅ ${uploaded} şəkil ${currentPhotoTab} kateqoriyasına yükləndi!`);
-    renderPhotoStatusRow(car);
+    await saveData(`✅ ${uploaded} ${mediaType === 'video' ? 'video' : 'şəkil'} yükləndi!`);
+    const car2 = cars.find(c => c.id === currentPhotoCarId);
+    if (car2) renderPhotoStatusRow(car2);
     renderPhotoTabContent();
     renderApp();
-    showToast(`${uploaded} şəkil uğurla yükləndi!`, 'success');
+    showToast(`${uploaded} fayl uğurla yükləndi!`, 'success');
   }
 }
 
-async function uploadToImgBB(file) {
-  const formData = new FormData();
-  formData.append('image', file);
-  const resp = await fetch(`https://api.imgbb.com/1/upload?key=${IMGBB_API_KEY}`, {
-    method: 'POST',
-    body: formData
-  });
-  if (!resp.ok) throw new Error(`ImgBB xətası: ${resp.status}`);
-  const data = await resp.json();
-  if (!data.success) throw new Error(data.error?.message || 'ImgBB yükləmə uğursuz oldu');
-  return {
-    url:        data.data.url,
-    thumb:      data.data.thumb ? data.data.thumb.url : data.data.display_url,
-    deleteHash: data.data.delete_hash
-  };
-}
-
-async function deleteAdminPhoto(index) {
+async function deleteAdminMedia(mediaType, index) {
   if (!currentPhotoCarId) return;
   const car = cars.find(c => c.id === currentPhotoCarId);
   if (!car || !car.photos || !car.photos[currentPhotoTab]) return;
-  if (!confirm('Bu şəkili silmək istədiyinizə əminsiniz?')) return;
-  car.photos[currentPhotoTab].splice(index, 1);
-  await saveData('Şəkil silindi və cloud-a yazıldı!');
+  const cat = car.photos[currentPhotoTab];
+  const arr = mediaType === 'video' ? cat.videos : cat.images;
+  if (!arr || !arr[index]) return;
+  if (!confirm(`Bu ${mediaType === 'video' ? 'videonu' : 'şəkili'} silmək istəyirsiniz?`)) return;
+
+  arr.splice(index, 1);
+  await saveData('Silindi!');
   renderPhotoStatusRow(car);
   renderPhotoTabContent();
   renderApp();
 }
 
 /* ============================
-   CUSTOMER LINK (shareToken)
+   CUSTOMER LINK
    ============================ */
 function openLinkModal(carId) {
   const car = cars.find(c => c.id === carId);
   if (!car) return;
-
   if (!car.shareToken) car.shareToken = generateShareToken();
   const link = `${window.location.origin}${window.location.pathname}?t=${car.shareToken}`;
-
   document.getElementById('link-output').value = link;
   document.getElementById('linkModal').classList.remove('hidden');
   closePhotoModal();
-
   saveDataToCloud(cars);
 }
 
-function closeLinkModal() {
-  document.getElementById('linkModal').classList.add('hidden');
-}
+function closeLinkModal() { document.getElementById('linkModal').classList.add('hidden'); }
 
 function copyLink() {
   const val = document.getElementById('link-output').value;
@@ -1341,12 +1524,12 @@ function copyLink() {
 function shareViaWhatsApp() {
   const val = document.getElementById('link-output').value;
   if (!val) return;
-  const msg = `Salam! Avtomobilinizin şəkillərinə baxmaq üçün bu linkə klikləyin:\n${val}`;
+  const msg = `Salam! Avtomobilinizin şəkillərinə və videolarına baxmaq üçün bu linkə klikləyin:\n${val}`;
   window.open(`https://wa.me/?text=${encodeURIComponent(msg)}`, '_blank');
 }
 
 /* ============================
-   SERVERLESS API ÇAĞIRIŞLARI
+   SERVERLESS API
    ============================ */
 async function loadDataFromCloud() {
   if (!sessionToken) return false;
@@ -1423,9 +1606,9 @@ async function saveData(msg = '✅ Cloud-a yazıldı!') {
 }
 
 function exportDataJSON() {
-  const str  = 'data:text/json;charset=utf-8,' + encodeURIComponent(JSON.stringify(cars, null, 2));
-  const a    = document.createElement('a');
-  a.href     = str;
+  const str = 'data:text/json;charset=utf-8,' + encodeURIComponent(JSON.stringify(cars, null, 2));
+  const a = document.createElement('a');
+  a.href = str;
   a.download = `carzone_backup_${new Date().toISOString().split('T')[0]}.json`;
   document.body.appendChild(a); a.click(); a.remove();
   showToast('Ehtiyat kopya (JSON) yükləndi!');
@@ -1435,9 +1618,9 @@ function exportDataJSON() {
    TOAST
    ============================ */
 function showToast(msg, type = 'info') {
-  const toast    = document.getElementById('toast');
+  const toast = document.getElementById('toast');
   const iconWrap = document.getElementById('toast-icon-wrap');
-  const icon     = document.getElementById('toast-icon');
+  const icon = document.getElementById('toast-icon');
   document.getElementById('toast-msg').textContent = msg;
 
   iconWrap.className = 'p-1.5 rounded-full shrink-0 ' +
@@ -1466,14 +1649,6 @@ function loadTrackingCompanies() {
       { id: 2, name: 'Maersk', url: 'https://www.maersk.com/tracking/' }
     ];
     saveTrackingCompanies();
-  } else {
-    let migrated = false;
-    trackingCompanies.forEach(co => {
-      if (co.name && co.name.trim().toUpperCase() === 'MSC' && !co.base64Params && co.url && co.url.includes('msc.com')) {
-        co.base64Params = true; co.paramsTemplate = 'trackingNumber={konteyner}&trackingMode=0'; co.url = 'https://www.msc.com/en/track-a-shipment'; migrated = true;
-      }
-    });
-    if (migrated) saveTrackingCompanies();
   }
 }
 
@@ -1553,7 +1728,7 @@ async function copyContainerAndTrack(carId, event) {
     const b64 = btoa(unescape(encodeURIComponent(resolved)));
     const sep = company.url.includes('?') ? '&' : '?';
     copyTextToClipboard(car.container).catch(()=>{});
-    showToast(`🔎 ${company.name} saytında birbaşa axtarış açılır...`);
+    showToast(`🔎 ${company.name} saytında axtarış açılır...`);
     window.open(`${company.url}${sep}params=${encodeURIComponent(b64)}`, '_blank');
     return;
   }
@@ -1568,8 +1743,8 @@ async function copyContainerAndTrack(carId, event) {
 
   try {
     await copyTextToClipboard(car.container);
-    showToast(`📋 "${car.container}" kopyalandı! ${company.name} saytı açılır, Ctrl+V ilə yapışdırın.`);
-  } catch { showToast('⚠️ Kopyalama alınmadı, sayt açılır...'); }
+    showToast(`📋 "${car.container}" kopyalandı! ${company.name} saytı açılır.`);
+  } catch { showToast('⚠️ Kopyalama alınmadı.'); }
   window.open(company.url, '_blank');
 }
 
@@ -1624,10 +1799,17 @@ function normalizeCars(list) {
   if (!Array.isArray(list)) return [];
   return list.map(c => {
     const raw = c.photos || {};
+    const migrateCat = (old) => {
+      if (Array.isArray(old)) return { images: old, videos: [] };
+      if (old && typeof old === 'object') {
+        return { images: old.images || [], videos: old.videos || [] };
+      }
+      return { images: [], videos: [] };
+    };
     const photos = {
-      pikap: raw.pikap || [],
-      anbar: raw.anbar || [],
-      poti:  raw.poti  || [],
+      pikap: migrateCat(raw.pikap),
+      anbar: migrateCat(raw.anbar),
+      poti:  migrateCat(raw.poti),
     };
     return {
       ...c,
@@ -1655,7 +1837,7 @@ function updateAdminUI() {
    ANALYTICS - LOGISTICS
    ============================ */
 function toggleLogisticsAnalytics(show) {
-  const section  = document.getElementById('logistics-analytics-section');
+  const section = document.getElementById('logistics-analytics-section');
   const backdrop = document.getElementById('analyticsBackdrop');
   if (show) {
     backdrop.classList.remove('hidden');
@@ -1671,11 +1853,11 @@ function toggleLogisticsAnalytics(show) {
 function setAnalyticsSearchMode(mode) {
   analyticsSearchMode = mode;
   const portBtn = document.getElementById('search-mode-port');
-  const locBtn  = document.getElementById('search-mode-location');
-  const actCls  = 'flex-1 py-2 px-3 text-xs font-bold rounded-xl bg-indigo-600 text-white transition shadow-sm';
-  const inactCls= 'flex-1 py-2 px-3 text-xs font-bold rounded-xl bg-white text-slate-600 border border-slate-200 hover:bg-slate-100 transition';
+  const locBtn = document.getElementById('search-mode-location');
+  const actCls = 'flex-1 py-2 px-3 text-xs font-bold rounded-xl bg-indigo-600 text-white transition shadow-sm';
+  const inactCls = 'flex-1 py-2 px-3 text-xs font-bold rounded-xl bg-white text-slate-600 border border-slate-200 hover:bg-slate-100 transition';
   portBtn.className = mode === 'port' ? actCls : inactCls;
-  locBtn.className  = mode === 'location' ? actCls : inactCls;
+  locBtn.className = mode === 'location' ? actCls : inactCls;
   renderLogisticsAnalytics();
 }
 
@@ -1829,14 +2011,14 @@ function renderPotiTrackingList() {
 async function toggleEtibarnameStatus(id) {
   const i = cars.findIndex(c=>c.id===id); if (i<0) return;
   cars[i].etibarname = !cars[i].etibarname;
-  await saveData(cars[i].etibarname?'📜 Etibarnamə verildi kimi qeyd olundu!':'⚠️ Etibarnamə hazır deyil.');
+  await saveData(cars[i].etibarname?'📜 Etibarnamə qeyd olundu!':'⚠️ Sıfırlandı.');
   renderPotiTrackingList();
 }
 
 async function toggleShippingPaidStatus(id) {
   const i = cars.findIndex(c=>c.id===id); if (i<0) return;
   cars[i].shippingPaid = !cars[i].shippingPaid;
-  await saveData(cars[i].shippingPaid?'💵 Yol pulu ödənildi kimi qeyd olundu!':'⏳ Yol pulu gözlənilir.');
+  await saveData(cars[i].shippingPaid?'💵 Yol pulu ödənildi!':'⏳ Sıfırlandı.');
   renderPotiTrackingList();
 }
 
@@ -1918,7 +2100,7 @@ async function processSaveCar(id, imageUrl) {
     etibarname: document.getElementById('form-etibarname').checked,
     shippingPaid: document.getElementById('form-shipping-paid').checked,
     shareToken: (existing && existing.shareToken) || generateShareToken(),
-    photos: (existing && existing.photos) || { pikap: [], anbar: [], poti: [] }
+    photos: (existing && existing.photos) || { pikap: {images:[],videos:[]}, anbar: {images:[],videos:[]}, poti: {images:[],videos:[]} }
   };
   if (id) { const i = cars.findIndex(c=>c.id===parseInt(id)); cars[i] = carData; }
   else cars.push(carData);
@@ -2019,9 +2201,9 @@ function openFinalFinanceReport() {
   document.getElementById('rpt-extra-costs').textContent = `$${ex.toLocaleString()}`;
   document.getElementById('rpt-real-total-sub').textContent = `$${rc.toLocaleString()}`;
   document.getElementById('rpt-analysis-text').textContent = np > 0
-    ? `Maliyyə portfeli müsbət (+) göstəricidədir. Şirkət xalis $${np.toLocaleString()} mənfəət əldə edib.`
-    : np === 0 ? `Maliyyə balansı sıfır ($0) səviyyəsindədir.`
-    : `⚠️ XƏBƏRDARLIQ: Maliyyə portfeli mənfi (-) göstəricidədir ($${np.toLocaleString()}). Real xərclər müştəriyə deyilən qiymətlərdən yuxarıdır.`;
+    ? `Maliyyə portfeli müsbət (+) göstəricidədir. Xalis $${np.toLocaleString()} mənfəət.`
+    : np === 0 ? `Maliyyə balansı sıfır səviyyəsindədir.`
+    : `⚠️ XƏBƏRDARLIQ: Maliyyə portfeli mənfi (-) göstəricidədir.`;
   document.getElementById('finalFinanceReportModal').classList.remove('hidden');
 }
 function closeFinalFinanceReport() { document.getElementById('finalFinanceReportModal').classList.add('hidden'); }
@@ -2088,15 +2270,15 @@ function renderApp() {
 
 function setViewMode(mode) {
   currentViewMode = mode;
-  const actCls  = 'px-3 py-1.5 rounded-lg text-xs font-bold transition flex items-center gap-1.5 bg-white text-red-600 shadow-sm';
-  const inaCls  = 'px-3 py-1.5 rounded-lg text-xs font-bold transition flex items-center gap-1.5 text-slate-600 hover:text-slate-900';
+  const actCls = 'px-3 py-1.5 rounded-lg text-xs font-bold transition flex items-center gap-1.5 bg-white text-red-600 shadow-sm';
+  const inaCls = 'px-3 py-1.5 rounded-lg text-xs font-bold transition flex items-center gap-1.5 text-slate-600 hover:text-slate-900';
   document.getElementById('btn-view-card').className  = mode==='card'  ? actCls : inaCls;
   document.getElementById('btn-view-table').className = mode==='table' ? actCls : inaCls;
   renderCarsContainer();
 }
 
 /* ============================
-   RENDERING - CARDS & TABLE
+   RENDERING
    ============================ */
 function renderCarsContainer() {
   const cont = document.getElementById('cars-container');
@@ -2105,7 +2287,6 @@ function renderCarsContainer() {
     cont.innerHTML = `<div class="bg-white rounded-3xl p-12 text-center border border-slate-200">
       <i class="fa-solid ${cars.length?'fa-car':'fa-folder-open'} text-4xl text-slate-300 mb-3 block"></i>
       <h3 class="text-base font-bold text-slate-700">${cars.length?'Heç bir avtomobil tapılmadı':'Hələ heç bir məlumat yoxdur'}</h3>
-      <p class="text-xs text-slate-400 mt-1">${cars.length?'Axtarış parametrlərini dəyişin.':'Yeni maşın əlavə edərək başlayın.'}</p>
     </div>`; return;
   }
   currentViewMode === 'card' ? renderCardGrid(cont, fc) : renderTableView(cont, fc);
@@ -2119,9 +2300,12 @@ function getPhotoStatusHtml(car) {
     { key:'poti',  icon:'🇬🇪', label:'Poti' },
   ];
   return cats.map(c => {
-    const cnt = (ph[c.key]||[]).length;
-    return `<span title="${c.label}: ${cnt} şəkil" class="flex items-center gap-0.5 text-[10px] font-bold ${cnt>0?'text-emerald-700':'text-rose-500'}">
-      <span>${cnt>0?'🟢':'🔴'}</span><span>${c.icon}</span>${cnt>0?cnt:''}
+    const cat = ph[c.key] || {};
+    const imgCnt = (cat.images || []).length;
+    const vidCnt = (cat.videos || []).length;
+    const ok = imgCnt > 0 || vidCnt > 0;
+    return `<span title="${c.label}: 📷${imgCnt} 🎬${vidCnt}" class="flex items-center gap-0.5 text-[10px] font-bold ${ok?'text-emerald-700':'text-rose-500'}">
+      <span>${ok?'🟢':'🔴'}</span><span>${c.icon}</span>${imgCnt>0?imgCnt:''}${vidCnt>0?'/'+vidCnt:''}
     </span>`;
   }).join('');
 }
@@ -2129,26 +2313,34 @@ function getPhotoStatusHtml(car) {
 function renderAdminCardPhotos(c) {
   const ph = c.photos || {};
   const cats = [
-    { key: 'pikap', label: '📦 Pikap',     color: 'text-indigo-700' },
-    { key: 'anbar', label: '🏭 Anbar',      color: 'text-blue-700'   },
-    { key: 'poti',  label: '🇬🇪 Poti',       color: 'text-amber-700'  },
+    { key: 'pikap', label: '📦 Pikap', color: 'text-indigo-700' },
+    { key: 'anbar', label: '🏭 Anbar', color: 'text-blue-700' },
+    { key: 'poti',  label: '🇬🇪 Poti',  color: 'text-amber-700' },
   ];
-  const hasAny = cats.some(ct => (ph[ct.key] || []).length > 0);
+  const hasAny = cats.some(ct => {
+    const cat = ph[ct.key] || {};
+    return (cat.images?.length || 0) + (cat.videos?.length || 0) > 0;
+  });
   if (!hasAny) return `
     <div class="bg-slate-50 border border-slate-100 rounded-xl px-3 py-2 flex items-center gap-2 text-xs text-slate-400">
-      <i class="fa-regular fa-image"></i> Hələ şəkil yüklənməyib
+      <i class="fa-regular fa-image"></i> Hələ media yüklənməyib
     </div>`;
 
-  let html = `<div class="space-y-2.5">`;
+  let html = `<div class="space-y-3">`;
   cats.forEach(ct => {
-    const photos = (ph[ct.key] || []).map(p => typeof p === 'string' ? p : p.url);
-    if (!photos.length) return;
-    const urlsJson = JSON.stringify(photos);
+    const cat = ph[ct.key] || {};
+    const images = (cat.images || []).map(p => typeof p === 'string' ? p : p.url);
+    const videos = (cat.videos || []).map(v => {
+      if (typeof v === 'string') return { url: v, thumb: getVideoThumb(v) };
+      return { url: v.url, thumb: v.thumb || getVideoThumb(v.url) };
+    });
+    if (!images.length && !videos.length) return;
+    const urlsJson = JSON.stringify(images);
     html += `
       <div>
-        <p class="text-[10px] font-extrabold uppercase ${ct.color} mb-1.5">${ct.label} <span class="font-semibold text-slate-400">(${photos.length})</span></p>
+        <p class="text-[10px] font-extrabold uppercase ${ct.color} mb-1.5">${ct.label} <span class="font-semibold text-slate-400">(📷${images.length} 🎬${videos.length})</span></p>
         <div class="grid grid-cols-4 gap-1.5">
-          ${photos.slice(0, 7).map((url, idx) => `
+          ${images.slice(0, 6).map((url, idx) => `
             <div class="relative aspect-square rounded-xl overflow-hidden border border-slate-200 cursor-pointer group"
                  onclick="openAdminLightbox(${idx}, ${urlsJson.replace(/'/g,"\\'")})">
               <img src="${url}" alt="" class="w-full h-full object-cover group-hover:scale-105 transition duration-200"
@@ -2157,11 +2349,19 @@ function renderAdminCardPhotos(c) {
                 <i class="fa-solid fa-expand text-white opacity-0 group-hover:opacity-100 text-sm transition"></i>
               </div>
             </div>`).join('')}
-          ${photos.length > 7 ? `
+          ${videos.slice(0, 2).map(v => `
+            <div class="relative aspect-square rounded-xl overflow-hidden border-2 border-purple-300 cursor-pointer group"
+                 onclick="window.open('${v.url}', '_blank')">
+              <img src="${v.thumb}" alt="" class="w-full h-full object-cover">
+              <div class="absolute inset-0 bg-black/40 flex items-center justify-center group-hover:bg-black/60 transition">
+                <i class="fa-solid fa-play text-white text-lg"></i>
+              </div>
+            </div>`).join('')}
+          ${(images.length + videos.length) > 8 ? `
             <div class="aspect-square rounded-xl bg-slate-200 border border-slate-300 flex items-center justify-center cursor-pointer hover:bg-slate-300 transition"
                  onclick="openPhotoModal(${c.id})">
               <div class="text-center">
-                <span class="block text-sm font-black text-slate-600">+${photos.length - 7}</span>
+                <span class="block text-sm font-black text-slate-600">+${images.length + videos.length - 8}</span>
                 <span class="text-[9px] text-slate-500">daha</span>
               </div>
             </div>` : ''}
@@ -2174,7 +2374,7 @@ function renderAdminCardPhotos(c) {
 
 function openAdminLightbox(startIdx, photos) {
   adminLbPhotos = photos;
-  adminLbIdx    = startIdx;
+  adminLbIdx = startIdx;
   lbPhotos = [];
   document.getElementById('lightbox').classList.remove('hidden');
   document.body.style.overflow = 'hidden';
@@ -2263,8 +2463,8 @@ function renderCardGrid(cont, fc) {
 
         <div class="p-4 bg-slate-50 border-t border-slate-100 flex items-center justify-between gap-2 mt-auto">
           <div class="flex items-center gap-2">
-            <button onclick="openPhotoModal(${c.id})" title="Şəkil İdarəetməsi" class="px-3 py-2 bg-indigo-100 hover:bg-indigo-200 text-indigo-800 rounded-xl text-xs font-bold transition flex items-center gap-1.5 border border-indigo-200">
-              <i class="fa-solid fa-images"></i><span class="hidden sm:inline">Şəkillər</span>
+            <button onclick="openPhotoModal(${c.id})" title="Media İdarəetməsi" class="px-3 py-2 bg-indigo-100 hover:bg-indigo-200 text-indigo-800 rounded-xl text-xs font-bold transition flex items-center gap-1.5 border border-indigo-200">
+              <i class="fa-solid fa-images"></i><span class="hidden sm:inline">Media</span>
             </button>
             <button onclick="openLinkModal(${c.id})" title="Müştəri Linki Yarat" class="px-3 py-2 bg-emerald-100 hover:bg-emerald-200 text-emerald-800 rounded-xl text-xs font-bold transition flex items-center gap-1.5 border border-emerald-200">
               <i class="fa-solid fa-link"></i><span class="hidden sm:inline">Link</span>
@@ -2289,7 +2489,7 @@ function renderTableView(cont, fc) {
         <tr class="bg-slate-900 text-white uppercase text-[10px] font-black tracking-wider">
           <th class="p-4">Uduş</th><th class="p-4">Poti</th><th class="p-4">Müştəri</th><th class="p-4">Model</th>
           <th class="p-4">Etibarnamə</th><th class="p-4">Yol Pulu</th><th class="p-4">Məkan</th><th class="p-4">Konteyner</th>
-          <th class="p-4">Şəkillər</th><th class="p-4 text-emerald-400">Net ($)</th>
+          <th class="p-4">Media</th><th class="p-4 text-emerald-400">Net ($)</th>
           <th class="p-4">Status</th><th class="p-4 text-center">Əməliyyat</th>
         </tr>
       </thead>
@@ -2315,7 +2515,7 @@ function renderTableView(cont, fc) {
       <td class="p-4"><span class="px-2.5 py-1 rounded-full text-[10px] font-bold bg-slate-100 text-slate-700">${c.status}</span></td>
       <td class="p-4">
         <div class="flex items-center justify-center space-x-1">
-          <button onclick="openPhotoModal(${c.id})" class="p-1.5 bg-indigo-50 text-indigo-700 rounded border border-indigo-200 hover:bg-indigo-100" title="Şəkillər"><i class="fa-solid fa-images"></i></button>
+          <button onclick="openPhotoModal(${c.id})" class="p-1.5 bg-indigo-50 text-indigo-700 rounded border border-indigo-200 hover:bg-indigo-100" title="Media"><i class="fa-solid fa-images"></i></button>
           <button onclick="openLinkModal(${c.id})" class="p-1.5 bg-emerald-50 text-emerald-700 rounded border border-emerald-200 hover:bg-emerald-100" title="Link"><i class="fa-solid fa-link"></i></button>
           <button onclick="openSingleCarFinance(${c.id})" class="p-1.5 bg-amber-50 text-amber-700 rounded border border-amber-200 hover:bg-amber-100"><i class="fa-solid fa-lock"></i></button>
           <button onclick="editCar(${c.id})" class="p-1.5 bg-slate-100 text-slate-700 rounded hover:bg-slate-200"><i class="fa-solid fa-pen-to-square"></i></button>
