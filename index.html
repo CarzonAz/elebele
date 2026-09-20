@@ -1518,25 +1518,60 @@ function getPhotoStatusHtml(car) {
 
 function renderAdminCardPhotos(c) {
   const ph = c.photos || {};
-  const cats = [{ key: 'pikap', label: '📦 Pikap', color: 'text-indigo-700' }, { key: 'anbar', label: '🏭 Anbar', color: 'text-blue-700' }, { key: 'poti', label: '🇬🇪 Poti', color: 'text-amber-700' }];
-  const hasAny = cats.some(ct => { const cat = ph[ct.key] || {}; return (cat.images?.length || 0) + (cat.videos?.length || 0) > 0; });
+  const cats = [
+    { key: 'pikap', label: '📦 Pikap', color: 'text-indigo-700' },
+    { key: 'anbar', label: '🏭 Anbar', color: 'text-blue-700' },
+    { key: 'poti',  label: '🇬🇪 Poti',  color: 'text-amber-700' }
+  ];
+  const hasAny = cats.some(ct => {
+    const cat = ph[ct.key] || {};
+    return (cat.images?.length || 0) + (cat.videos?.length || 0) > 0;
+  });
   if (!hasAny) return '<div class="bg-slate-50 border border-slate-100 rounded-xl px-3 py-2 flex items-center gap-2 text-xs text-slate-400"><i class="fa-regular fa-image"></i> Media yoxdur</div>';
+
   let html = '<div class="space-y-3">';
   cats.forEach(ct => {
     const cat = ph[ct.key] || {};
     const images = (cat.images || []).map(p => typeof p === 'string' ? p : p.url);
     const videos = (cat.videos || []).map(v => typeof v === 'string' ? { url: v, thumb: getVideoThumb(v) } : { url: v.url, thumb: v.thumb || getVideoThumb(v.url) });
     if (!images.length && !videos.length) return;
+
+    /* JSON-u HTML atributuna təhlükəsiz yerləşdirmək üçün escape */
+    const safeJson = JSON.stringify(images).replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+
     html += `<div><p class="text-[10px] font-extrabold uppercase ${ct.color} mb-1.5">${ct.label} (📷${images.length} 🎬${videos.length})</p><div class="grid grid-cols-4 gap-1.5">`;
+
     images.slice(0, 6).forEach((url, idx) => {
-      html += `<div class="relative aspect-square rounded-xl overflow-hidden border border-slate-200 cursor-pointer group" onclick="openAdminLightbox(${idx}, ${JSON.stringify(images).replace(/'/g, "\\'")})"><img src="${url}" class="w-full h-full object-cover group-hover:scale-105 transition" onerror="this.parentElement.style.display='none'"></div>`;
+      html += `<div class="relative aspect-square rounded-xl overflow-hidden border border-slate-200 cursor-pointer group" data-photos="${safeJson}" data-start="${idx}" onclick="openAdminLightboxFromEl(this)"><img src="${url}" class="w-full h-full object-cover group-hover:scale-105 transition" onerror="this.parentElement.style.display='none'"><div class="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition flex items-center justify-center"><i class="fa-solid fa-expand text-white opacity-0 group-hover:opacity-100 text-sm transition"></i></div></div>`;
     });
-    videos.slice(0, 2).forEach(v => { html += `<div class="relative aspect-square rounded-xl overflow-hidden border-2 border-purple-300 cursor-pointer" onclick="window.open('${v.url}','_blank')"><img src="${v.thumb}" class="w-full h-full object-cover"><div class="absolute inset-0 bg-black/40 flex items-center justify-center"><i class="fa-solid fa-play text-white text-lg"></i></div></div>`; });
-    if ((images.length + videos.length) > 8) html += `<div class="aspect-square rounded-xl bg-slate-200 flex items-center justify-center cursor-pointer" onclick="openPhotoModal(${c.id})"><span class="text-sm font-black text-slate-600">+${images.length + videos.length - 8}</span></div>`;
+
+    videos.slice(0, 2).forEach(v => {
+      html += `<div class="relative aspect-square rounded-xl overflow-hidden border-2 border-purple-300 cursor-pointer" onclick="window.open('${v.url.replace(/'/g, "\\'")}','_blank')"><img src="${v.thumb}" class="w-full h-full object-cover"><div class="absolute inset-0 bg-black/40 flex items-center justify-center"><i class="fa-solid fa-play text-white text-lg"></i></div></div>`;
+    });
+
+    if ((images.length + videos.length) > 8) {
+      html += `<div class="aspect-square rounded-xl bg-slate-200 flex items-center justify-center cursor-pointer" onclick="openPhotoModal(${c.id})"><span class="text-sm font-black text-slate-600">+${images.length + videos.length - 8}</span></div>`;
+    }
+
     html += '</div></div>';
   });
   html += '</div>';
   return html;
+}
+
+/* Yeni köməkçi funksiya — data atributundan oxuyur */
+function openAdminLightboxFromEl(el) {
+  const photosJson = el.getAttribute('data-photos') || '[]';
+  const startIdx = parseInt(el.getAttribute('data-start') || '0');
+  let photos = [];
+  try {
+    photos = JSON.parse(photosJson);
+  } catch(e) {
+    console.error('Photos parse xətası:', e);
+    return;
+  }
+  if (!Array.isArray(photos) || !photos.length) return;
+  openAdminLightbox(startIdx, photos);
 }
 
 function openAdminLightbox(startIdx, photos) { adminLbPhotos = photos; adminLbIdx = startIdx; lbPhotos = []; document.getElementById('lightbox').classList.remove('hidden'); document.body.style.overflow = 'hidden'; renderAdminLightbox(); }
