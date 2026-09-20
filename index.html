@@ -90,21 +90,23 @@ window.addEventListener('error', function(e) {
     </div>
     <p class="text-center text-xs text-slate-400 font-medium pb-4">Carzone Logistika • Müştəri Paneli</p>
   </div>
-  <div id="lightbox" class="hidden fixed inset-0 z-[100] bg-black flex flex-col select-none">
-    <div class="flex items-center justify-between px-4 py-3 bg-black/60 shrink-0">
-      <span id="lb-counter" class="text-white text-sm font-bold">1 / 1</span>
-      <button onclick="lbDownloadCurrent()" class="flex items-center gap-2 px-4 py-2 bg-white/15 hover:bg-white/25 text-white rounded-xl text-sm font-bold transition">
-        <i class="fa-solid fa-arrow-down-to-line"></i> Telefona Yüklə
-      </button>
-      <button onclick="closeLightbox()" class="w-10 h-10 flex items-center justify-center text-white/70 hover:text-white text-xl"><i class="fa-solid fa-xmark"></i></button>
-    </div>
-    <div class="flex-1 flex items-center justify-center relative overflow-hidden" id="lb-img-area">
-      <button onclick="lbPrev()" class="absolute left-2 z-10 w-11 h-11 flex items-center justify-center bg-black/40 hover:bg-black/70 text-white rounded-full text-lg transition"><i class="fa-solid fa-chevron-left"></i></button>
-      <img id="lb-img" src="" alt="" class="max-h-full max-w-full object-contain px-14" draggable="false">
-      <button onclick="lbNext()" class="absolute right-2 z-10 w-11 h-11 flex items-center justify-center bg-black/40 hover:bg-black/70 text-white rounded-full text-lg transition"><i class="fa-solid fa-chevron-right"></i></button>
-    </div>
-    <div id="lb-dots" class="flex justify-center gap-2 py-4 shrink-0"></div>
+</div>
+
+<!-- LIGHTBOX — Customer və Admin üçün ortaq -->
+<div id="lightbox" class="hidden fixed inset-0 z-[100] bg-black flex flex-col select-none">
+  <div class="flex items-center justify-between px-4 py-3 bg-black/60 shrink-0">
+    <span id="lb-counter" class="text-white text-sm font-bold">1 / 1</span>
+    <button onclick="lbDownloadCurrent()" class="flex items-center gap-2 px-4 py-2 bg-white/15 hover:bg-white/25 text-white rounded-xl text-sm font-bold transition">
+      <i class="fa-solid fa-arrow-down-to-line"></i> Telefona Yüklə
+    </button>
+    <button onclick="closeLightbox()" class="w-10 h-10 flex items-center justify-center text-white/70 hover:text-white text-xl"><i class="fa-solid fa-xmark"></i></button>
   </div>
+  <div class="flex-1 flex items-center justify-center relative overflow-hidden" id="lb-img-area">
+    <button onclick="lbPrev()" class="absolute left-2 z-10 w-11 h-11 flex items-center justify-center bg-black/40 hover:bg-black/70 text-white rounded-full text-lg transition"><i class="fa-solid fa-chevron-left"></i></button>
+    <img id="lb-img" src="" alt="" class="max-h-full max-w-full object-contain px-14" draggable="false">
+    <button onclick="lbNext()" class="absolute right-2 z-10 w-11 h-11 flex items-center justify-center bg-black/40 hover:bg-black/70 text-white rounded-full text-lg transition"><i class="fa-solid fa-chevron-right"></i></button>
+  </div>
+  <div id="lb-dots" class="flex justify-center gap-2 py-4 shrink-0"></div>
 </div>
 
 <div id="admin-panel" class="hidden">
