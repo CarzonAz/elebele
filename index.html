@@ -51,6 +51,30 @@ body{font-family:'Plus Jakarta Sans',sans-serif;background:#f1f5f9;color:#0f172a
 </head>
 <body class="min-h-screen pb-12 antialiased">
 
+<!-- ===================== LOCK SCREEN (Root URL giriş qapısı) ===================== -->
+<div id="lockScreen" class="hidden fixed inset-0 z-[300] bg-slate-950 flex items-center justify-center p-4">
+  <div class="absolute inset-0 opacity-30 pointer-events-none" style="background-image:radial-gradient(circle at 20% 20%, #1e293b 0%, transparent 50%),radial-gradient(circle at 80% 80%, #7f1d1d 0%, transparent 50%)"></div>
+  <div class="relative bg-slate-900 border border-slate-800 text-white w-full max-w-sm rounded-3xl p-8 shadow-2xl text-center space-y-5">
+    <div class="flex items-center justify-center gap-3 mb-1">
+      <div class="bg-red-600 p-2.5 rounded-xl text-white text-lg"><i class="fa-solid fa-car-side"></i></div>
+      <h1 class="text-2xl font-black tracking-tight">CAR<span class="text-red-600">ZON</span></h1>
+    </div>
+    <div class="w-16 h-16 bg-amber-500/10 border border-amber-500/20 text-amber-400 rounded-2xl flex items-center justify-center text-3xl mx-auto"><i class="fa-solid fa-shield-halved"></i></div>
+    <div>
+      <h3 class="text-base font-bold text-white">Sistem Kilidlidir</h3>
+      <p class="text-xs text-slate-400 mt-1.5 leading-relaxed">Bu panel yalnız səlahiyyətli istifadəçilər üçündür.<br>Davam etmək üçün 4 rəqəmli PIN kodu daxil edin.</p>
+    </div>
+    <input type="password" id="lock-pin-input" maxlength="4" inputmode="numeric" autocomplete="off" placeholder="• • • •" class="w-full bg-slate-800 border-2 border-slate-700 text-center text-2xl font-mono tracking-widest text-amber-400 py-4 rounded-2xl focus:outline-none focus:border-amber-500 transition">
+    <div id="lock-error-msg" class="hidden bg-rose-500/15 border border-rose-500/30 text-rose-400 text-xs p-3 rounded-xl font-bold flex items-center justify-center gap-2">
+      <i class="fa-solid fa-triangle-exclamation"></i><span>Yanlış PIN kod! Yenidən cəhd edin.</span>
+    </div>
+    <button id="lock-submit-btn" class="w-full py-3 bg-red-600 hover:bg-red-700 text-white text-sm font-bold rounded-2xl shadow-lg shadow-red-500/20 transition flex items-center justify-center gap-2">
+      <i class="fa-solid fa-unlock"></i> Kilidi Aç
+    </button>
+    <p class="text-[10px] text-slate-500 font-medium pt-1">© Carzone Logistics • İcazəsiz giriş qadağandır</p>
+  </div>
+</div>
+
 <!-- ===================== TOAST ===================== -->
 <div id="toast" class="fixed bottom-6 right-6 z-[200] transform translate-y-24 opacity-0 transition-all duration-300 bg-slate-900 text-white px-5 py-3.5 rounded-2xl shadow-2xl flex items-center space-x-3 border border-slate-700 max-w-xs">
   <div id="toast-icon-wrap" class="bg-emerald-500 p-1.5 rounded-full shrink-0"><i id="toast-icon" class="fa-solid fa-check text-xs"></i></div>
@@ -98,7 +122,6 @@ body{font-family:'Plus Jakarta Sans',sans-serif;background:#f1f5f9;color:#0f172a
 
   <!-- Lightbox -->
   <div id="lightbox" class="hidden fixed inset-0 z-[100] bg-black flex flex-col select-none">
-    <!-- Top bar -->
     <div class="flex items-center justify-between px-4 py-3 bg-black/60 shrink-0">
       <span id="lb-counter" class="text-white text-sm font-bold">1 / 1</span>
       <button id="lb-dl-btn" onclick="lbDownloadCurrent()" class="flex items-center gap-2 px-4 py-2 bg-white/15 hover:bg-white/25 text-white rounded-xl text-sm font-bold transition">
@@ -106,19 +129,17 @@ body{font-family:'Plus Jakarta Sans',sans-serif;background:#f1f5f9;color:#0f172a
       </button>
       <button onclick="closeLightbox()" class="w-10 h-10 flex items-center justify-center text-white/70 hover:text-white text-xl"><i class="fa-solid fa-xmark"></i></button>
     </div>
-    <!-- Image area -->
     <div class="flex-1 flex items-center justify-center relative overflow-hidden" id="lb-img-area">
       <button onclick="lbPrev()" class="absolute left-2 z-10 w-11 h-11 flex items-center justify-center bg-black/40 hover:bg-black/70 text-white rounded-full text-lg transition"><i class="fa-solid fa-chevron-left"></i></button>
       <img id="lb-img" src="" alt="" class="max-h-full max-w-full object-contain px-14" draggable="false">
       <button onclick="lbNext()" class="absolute right-2 z-10 w-11 h-11 flex items-center justify-center bg-black/40 hover:bg-black/70 text-white rounded-full text-lg transition"><i class="fa-solid fa-chevron-right"></i></button>
     </div>
-    <!-- Dot indicators -->
     <div id="lb-dots" class="flex justify-center gap-2 py-4 shrink-0"></div>
   </div>
 </div><!-- /customer-panel -->
 
-<!-- ===================== ADMIN PANEL ===================== -->
-<div id="admin-panel">
+<!-- ===================== ADMIN PANEL (initially hidden — lock screen arxasında) ===================== -->
+<div id="admin-panel" class="hidden">
 
 <!-- Analytics Backdrop -->
 <div id="analyticsBackdrop" onclick="toggleLogisticsAnalytics(false)" class="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50 hidden opacity-0 transition-opacity duration-300"></div>
@@ -183,8 +204,8 @@ body{font-family:'Plus Jakarta Sans',sans-serif;background:#f1f5f9;color:#0f172a
       <button onclick="openPotiTrackingModal()" class="px-3.5 py-2.5 bg-amber-500 hover:bg-amber-600 text-slate-950 text-xs sm:text-sm font-bold rounded-xl transition flex items-center gap-2 border border-amber-400 shadow-sm">
         <i class="fa-solid fa-file-signature text-slate-950"></i><span class="hidden lg:inline">Poti & Etibarnamə Nəzarəti</span>
       </button>
-      <button onclick="toggleAdminPanel()" id="btn-admin-toggle" class="px-3.5 py-2.5 bg-slate-900 hover:bg-slate-800 text-amber-400 text-sm font-bold rounded-xl transition flex items-center justify-center border border-slate-700 shadow-md">
-        <i class="fa-solid fa-lock" id="admin-icon"></i>
+      <button onclick="lockAdminPanel()" id="btn-admin-toggle" class="px-3.5 py-2.5 bg-emerald-950 hover:bg-emerald-900 text-emerald-400 text-sm font-bold rounded-xl transition flex items-center justify-center border border-emerald-700 shadow-md" title="Paneli Kilidlə">
+        <i class="fa-solid fa-lock-open" id="admin-icon"></i>
       </button>
       <button id="btn-final-finance" onclick="openFinalFinanceReport()" class="hidden px-3.5 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs sm:text-sm font-bold rounded-xl transition flex items-center gap-2 border border-emerald-500 shadow-sm">
         <i class="fa-solid fa-chart-line"></i><span>Yekun Maliyyə</span>
@@ -207,7 +228,7 @@ body{font-family:'Plus Jakarta Sans',sans-serif;background:#f1f5f9;color:#0f172a
 <main class="max-w-[1750px] mx-auto px-4 sm:px-8 mt-6 space-y-6">
 
   <!-- Gizli Maliyyə Analitikası -->
-  <div id="financial-analytics-section" class="hidden bg-slate-900 text-white p-6 rounded-3xl border border-slate-800 shadow-2xl space-y-6">
+  <div id="financial-analytics-section" class="bg-slate-900 text-white p-6 rounded-3xl border border-slate-800 shadow-2xl space-y-6">
     <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between border-b border-slate-800 pb-4 gap-4">
       <div class="flex items-center space-x-3">
         <div class="p-3 bg-amber-500/10 text-amber-400 rounded-2xl border border-amber-500/20 text-xl"><i class="fa-solid fa-sack-dollar"></i></div>
@@ -291,12 +312,8 @@ body{font-family:'Plus Jakarta Sans',sans-serif;background:#f1f5f9;color:#0f172a
       <button onclick="closePhotoModal()" class="text-slate-400 hover:text-slate-700 text-xl"><i class="fa-solid fa-xmark"></i></button>
     </div>
 
-    <!-- Photo Status Row -->
-    <div id="photo-status-row" class="px-5 pt-4 shrink-0">
-      <!-- Rendered by JS -->
-    </div>
+    <div id="photo-status-row" class="px-5 pt-4 shrink-0"></div>
 
-    <!-- Category Tabs -->
     <div class="px-5 pt-3 shrink-0">
       <div class="bg-slate-100 border border-slate-200 p-1 rounded-2xl flex gap-1">
         <button id="ptab-pikap" onclick="setPhotoTab('pikap')" class="flex-1 py-2 px-2 rounded-xl text-xs font-bold transition bg-white text-indigo-700 shadow-sm">📦 Pikap</button>
@@ -305,10 +322,8 @@ body{font-family:'Plus Jakarta Sans',sans-serif;background:#f1f5f9;color:#0f172a
       </div>
     </div>
 
-    <!-- Tab Content -->
     <div id="photo-tab-content" class="p-5 overflow-y-auto cs flex-1 space-y-4"></div>
 
-    <!-- Footer -->
     <div class="p-4 bg-slate-50 border-t border-slate-100 flex flex-col sm:flex-row justify-between gap-2 shrink-0">
       <button onclick="openLinkModal(currentPhotoCarId)" class="px-4 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold flex items-center justify-center gap-2 transition shadow-sm">
         <i class="fa-solid fa-link"></i> Müştəri Linkini Yarat
@@ -505,7 +520,6 @@ body{font-family:'Plus Jakarta Sans',sans-serif;background:#f1f5f9;color:#0f172a
         </div>
       </div>
 
-      <!-- Etibarnamə / Yol Pulu -->
       <div class="border-t border-slate-100 pt-4 grid grid-cols-1 sm:grid-cols-2 gap-4 bg-amber-50/60 p-4 rounded-2xl border border-amber-200/80">
         <div class="flex items-center space-x-3">
           <input type="checkbox" id="form-etibarname" class="w-5 h-5 text-amber-600 border-slate-300 rounded focus:ring-amber-500 cursor-pointer">
@@ -517,7 +531,6 @@ body{font-family:'Plus Jakarta Sans',sans-serif;background:#f1f5f9;color:#0f172a
         </div>
       </div>
 
-      <!-- Tarixlər -->
       <div class="border-t border-slate-100 pt-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
         <div>
           <label class="block text-[11px] font-semibold text-slate-600 mb-1">Uduş Tarixi *</label>
@@ -553,8 +566,7 @@ body{font-family:'Plus Jakarta Sans',sans-serif;background:#f1f5f9;color:#0f172a
         </div>
       </div>
 
-      <!-- Admin Maliyyə -->
-      <div id="modal-financial-section" class="hidden border-2 border-amber-500/30 bg-amber-500/5 p-4 rounded-2xl space-y-4">
+      <div id="modal-financial-section" class="border-2 border-amber-500/30 bg-amber-500/5 p-4 rounded-2xl space-y-4">
         <div class="flex items-center justify-between border-b border-amber-500/20 pb-2">
           <span class="text-xs font-black uppercase tracking-wider text-amber-700 flex items-center gap-2"><i class="fa-solid fa-lock text-amber-600"></i> Gizli Maliyyə Hökmləri (Dollar $)</span>
           <span class="text-[10px] bg-amber-200 text-amber-900 font-bold px-2 py-0.5 rounded-full">PIN İlə Qorunur</span>
@@ -573,8 +585,7 @@ body{font-family:'Plus Jakarta Sans',sans-serif;background:#f1f5f9;color:#0f172a
         </div>
       </div>
 
-      <!-- Documents -->
-      <div id="modal-documents-section" class="hidden border border-slate-200 p-4 rounded-2xl space-y-3">
+      <div id="modal-documents-section" class="border border-slate-200 p-4 rounded-2xl space-y-3">
         <span class="text-xs font-bold text-slate-700 uppercase tracking-wider block">📎 Xüsusi Sənədlər</span>
         <div class="flex gap-2">
           <select id="doc-type-select" class="bg-slate-50 border border-slate-200 text-xs rounded-xl px-3 py-2 font-bold text-slate-800">
@@ -636,17 +647,6 @@ body{font-family:'Plus Jakarta Sans',sans-serif;background:#f1f5f9;color:#0f172a
   </div>
 </div>
 
-<!-- PIN Modal -->
-<div id="pinModal" class="fixed inset-0 z-50 hidden bg-slate-950/80 backdrop-blur-md flex items-center justify-center p-4">
-  <div class="bg-slate-900 border border-slate-800 text-white w-full max-w-sm rounded-3xl p-6 shadow-2xl text-center space-y-4">
-    <div class="w-14 h-14 bg-amber-500/10 border border-amber-500/20 text-amber-400 rounded-2xl flex items-center justify-center text-2xl mx-auto"><i class="fa-solid fa-key"></i></div>
-    <div><h3 class="text-base font-bold text-white">ADMİN PANEL</h3><p class="text-xs text-slate-400 mt-1">Davam etmək üçün 4 rəqəmli PIN kodu daxil edin</p></div>
-    <input type="password" id="pin-input" maxlength="4" oninput="handlePinInput(this.value)" placeholder="• • • •" class="w-full bg-slate-800 border border-slate-700 text-center text-2xl font-mono tracking-widest text-amber-400 py-3 rounded-xl focus:outline-none focus:border-amber-500 transition">
-    <div id="pin-error-msg" class="hidden bg-rose-500/15 border border-rose-500/30 text-rose-400 text-xs p-3 rounded-xl font-bold flex items-center justify-center gap-2"><i class="fa-solid fa-triangle-exclamation"></i><span>Yanlış PIN kod! Yenidən cəhd edin.</span></div>
-    <button onclick="closePinModal()" class="w-full py-2.5 bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-bold rounded-xl transition">Ləğv Et</button>
-  </div>
-</div>
-
 <!-- Delete Modal -->
 <div id="deleteModal" class="fixed inset-0 z-50 hidden bg-slate-950/80 backdrop-blur-md flex items-center justify-center p-4">
   <div class="bg-white border border-slate-200 text-slate-900 w-full max-w-sm rounded-3xl p-6 shadow-2xl text-center space-y-4">
@@ -683,18 +683,15 @@ let currentViewMode    = 'card';
 let analyticsSearchMode = 'port';
 let trackingCompanies  = [];
 
-/* Photo modal state */
 let currentPhotoCarId = null;
 let currentPhotoTab   = 'pikap';
 
-/* Customer panel state */
 let custData     = null;
 let custTab      = 'pikap';
 let lbPhotos     = [];
 let lbIndex      = 0;
 let lbTouchStart = 0;
 
-/* Admin lightbox state */
 let adminLbPhotos = [], adminLbIdx = 0;
 
 /* ============================
@@ -714,8 +711,10 @@ window.addEventListener('DOMContentLoaded', async () => {
   const dataParam  = params.get('data');
   const tokenParam = params.get('t');
 
+  /* === MÜŞTƏRİ REJİMİ (?data= və ya ?t=) === */
   if (dataParam || tokenParam) {
     document.getElementById('admin-panel').classList.add('hidden');
+    document.getElementById('lockScreen').classList.add('hidden');
     document.getElementById('customer-panel').classList.remove('hidden');
     if (dataParam) {
       initCustomerPanel(dataParam);
@@ -725,7 +724,24 @@ window.addEventListener('DOMContentLoaded', async () => {
     return;
   }
 
-  /* Admin init */
+  /* === ADMİN REJİMİ — HƏMİŞƏ KİLİDLƏ BAŞLAYIR === */
+  document.getElementById('admin-panel').classList.add('hidden');
+  document.getElementById('customer-panel').classList.add('hidden');
+  document.getElementById('lockScreen').classList.remove('hidden');
+  setTimeout(() => document.getElementById('lock-pin-input').focus(), 150);
+
+  /* Lock screen hadisələri */
+  const lockInput = document.getElementById('lock-pin-input');
+  lockInput.addEventListener('input', e => {
+    e.target.value = e.target.value.replace(/\D/g,'').slice(0,4);
+    document.getElementById('lock-error-msg').classList.add('hidden');
+  });
+  lockInput.addEventListener('keydown', e => {
+    if (e.key === 'Enter') verifyLockPin();
+  });
+  document.getElementById('lock-submit-btn').addEventListener('click', verifyLockPin);
+
+  /* Cloud datasını arxa fonda yüklə (kilid açıldıqda hazır olsun) */
   loadTrackingCompanies();
   renderTrackingCompanySelect();
 
@@ -733,7 +749,6 @@ window.addEventListener('DOMContentLoaded', async () => {
   if (saved) {
     try { cars = normalizeCars(JSON.parse(saved)); } catch(e) { cars = []; }
   }
-
   await loadDataFromCloud();
 
   const docInput = document.getElementById('doc-file-input');
@@ -752,9 +767,6 @@ window.addEventListener('DOMContentLoaded', async () => {
     });
   }
 
-  updateAdminUI();
-  renderApp();
-
   /* Lightbox keyboard */
   document.addEventListener('keydown', e => {
     const lb = document.getElementById('lightbox');
@@ -765,7 +777,6 @@ window.addEventListener('DOMContentLoaded', async () => {
     }
   });
 
-  /* Lightbox swipe */
   const lbArea = document.getElementById('lb-img-area');
   if (lbArea) {
     lbArea.addEventListener('touchstart', e => { lbTouchStart = e.touches[0].clientX; }, { passive: true });
@@ -775,6 +786,41 @@ window.addEventListener('DOMContentLoaded', async () => {
     });
   }
 });
+
+/* ============================
+   LOCK SCREEN PIN YOXLAMA
+   ============================ */
+function verifyLockPin() {
+  const input = document.getElementById('lock-pin-input');
+  const pin = input.value;
+
+  if (pin === SECRET_PIN) {
+    isAdminLoggedIn = true;
+    /* Kilid ekranını gizlət, admin panelini aç */
+    document.getElementById('lockScreen').classList.add('hidden');
+    document.getElementById('admin-panel').classList.remove('hidden');
+    document.body.style.overflow = '';
+    updateAdminUI();
+    showToast('🔓 Xoş gəldiniz! Panel açıldı.', 'success');
+  } else {
+    document.getElementById('lock-error-msg').classList.remove('hidden');
+    input.classList.add('border-rose-500');
+    input.value = '';
+    setTimeout(() => input.classList.remove('border-rose-500'), 1200);
+    setTimeout(() => input.focus(), 100);
+  }
+}
+
+/* Header-dəki kilid düyməsi — paneli bağlayır və lock screen-ə qayıdır */
+function lockAdminPanel() {
+  isAdminLoggedIn = false;
+  document.getElementById('admin-panel').classList.add('hidden');
+  document.getElementById('lockScreen').classList.remove('hidden');
+  document.getElementById('lock-pin-input').value = '';
+  document.getElementById('lock-error-msg').classList.add('hidden');
+  setTimeout(() => document.getElementById('lock-pin-input').focus(), 150);
+  showToast('🔒 Panel kilidləndi.');
+}
 
 /* ============================
    CUSTOMER PANEL — base64 data (?data=)
@@ -1011,12 +1057,11 @@ function renderCustomerPhotos() {
     </div>`;
 }
 
-/* Lightbox */
 function openLightbox(index) {
   const ph = custData.ph || {};
   lbPhotos = ph[custTab] || [];
   lbIndex  = index;
-  adminLbPhotos = [];   // admin rejimini sıfırla
+  adminLbPhotos = [];
   document.getElementById('lightbox').classList.remove('hidden');
   document.body.style.overflow = 'hidden';
   renderLightbox();
@@ -1099,7 +1144,7 @@ async function downloadPhotosAsZip(photosByCategory, baseName) {
         const blob = await resp.blob();
         folder.file(`${String(i+1).padStart(3,'0')}.jpg`, blob);
         total++;
-      } catch { /* skip failed */ }
+      } catch { }
     }
   }
 
@@ -1143,12 +1188,6 @@ function setPhotoTab(tab) {
   renderPhotoTabContent();
 }
 
-function getCarPhotos(carId) {
-  const car = cars.find(c => c.id === carId);
-  if (!car) return { pikap: [], anbar: [], poti: [] };
-  return car.photos || { pikap: [], anbar: [], poti: [] };
-}
-
 function renderPhotoStatusRow(car) {
   const ph = car.photos || {};
   const cats = [
@@ -1177,7 +1216,6 @@ function renderPhotoTabContent() {
   const catLabel = { pikap: 'Pikap', anbar: 'Anbar', poti: 'Poti' }[currentPhotoTab];
 
   tabContent.innerHTML = `
-    <!-- Upload Zone -->
     <div class="drop-zone rounded-2xl p-5 text-center space-y-3" id="drop-zone">
       <div class="w-12 h-12 bg-indigo-100 text-indigo-600 rounded-2xl flex items-center justify-center text-xl mx-auto border border-indigo-200">
         <i class="fa-solid fa-cloud-arrow-up"></i>
@@ -1192,13 +1230,11 @@ function renderPhotoTabContent() {
       </label>
     </div>
 
-    <!-- Upload progress -->
     <div id="upload-progress" class="hidden bg-indigo-50 border border-indigo-200 rounded-2xl p-4 text-xs font-bold text-indigo-800 flex items-center gap-3">
       <i class="fa-solid fa-spinner fa-spin text-indigo-600"></i>
       <span id="upload-progress-text">Şəkillər ImgBB-ə yüklənir...</span>
     </div>
 
-    <!-- Existing Photos -->
     ${photos.length > 0 ? `
     <div>
       <div class="flex items-center justify-between mb-3">
@@ -1210,8 +1246,7 @@ function renderPhotoTabContent() {
           const date = typeof p === 'object' && p.date ? p.date : '';
           return `
             <div class="relative group rounded-xl overflow-hidden border border-slate-200 shadow-sm">
-              <img src="${url}" alt="Şəkil ${i+1}" class="photo-thumb w-full" loading="lazy"
-                onerror="this.style.background='#f1f5f9'; this.style.display='flex'">
+              <img src="${url}" alt="Şəkil ${i+1}" class="photo-thumb w-full" loading="lazy">
               <div class="absolute inset-0 bg-black/0 group-hover:bg-black/40 transition flex items-start justify-end p-1.5">
                 <button onclick="deleteAdminPhoto(${i})" class="opacity-0 group-hover:opacity-100 transition w-7 h-7 bg-rose-600 text-white rounded-lg text-xs flex items-center justify-center shadow">
                   <i class="fa-solid fa-trash"></i>
@@ -1308,14 +1343,12 @@ function openLinkModal(carId) {
   if (!car) return;
 
   if (!car.shareToken) car.shareToken = generateShareToken();
-
   const link = `${window.location.origin}${window.location.pathname}?t=${car.shareToken}`;
 
   document.getElementById('link-output').value = link;
   document.getElementById('linkModal').classList.remove('hidden');
   closePhotoModal();
 
-  /* Tokeni cloud-a yaz (əgər təzə yaranıbsa) */
   saveDataToCloud(cars);
 }
 
@@ -1367,7 +1400,7 @@ async function loadDataFromCloud() {
       cars = normalizeCars(remote);
       localStorage.setItem('carzone_db', JSON.stringify(cars));
       if (needsMigration) await saveDataToCloud(cars);
-      renderApp();
+      if (isAdminLoggedIn) renderApp();
       return true;
     }
     showToast('⚠️ Cloud datası yanlış formatdadır.', 'error');
@@ -1618,7 +1651,6 @@ function normalizeCars(list) {
   if (!Array.isArray(list)) return [];
   return list.map(c => {
     const raw = c.photos || {};
-    /* Köhnə sxemdən miqrasiya: sonTehvil və baki artıq istifadə olunmur */
     const photos = {
       pikap: raw.pikap || [],
       anbar: raw.anbar || [],
@@ -1638,60 +1670,11 @@ function normalizeCars(list) {
 }
 
 /* ============================
-   PIN LOGIC
+   ADMIN UI
    ============================ */
-function openPinPrompt() {
-  document.getElementById('pin-input').value = '';
-  document.getElementById('pin-error-msg').classList.add('hidden');
-  document.getElementById('pinModal').classList.remove('hidden');
-  setTimeout(() => document.getElementById('pin-input').focus(), 100);
-}
-
-function closePinModal() { document.getElementById('pinModal').classList.add('hidden'); pendingCarIdToView = null; }
-
-function handlePinInput(val) {
-  document.getElementById('pin-error-msg').classList.add('hidden');
-  if (val.length === 4) verifyPin();
-}
-
-function verifyPin() {
-  const pin = document.getElementById('pin-input').value;
-  if (pin === SECRET_PIN) {
-    isAdminLoggedIn = true;
-    closePinModal();
-    showToast('🔓 Giriş Uğurludur! Gizli Panellər Aktivləşdi.');
-    updateAdminUI();
-    if (pendingCarIdToView !== null) { openSingleCarFinance(pendingCarIdToView); pendingCarIdToView = null; }
-  } else {
-    document.getElementById('pin-error-msg').classList.remove('hidden');
-    document.getElementById('pin-input').classList.add('border-rose-500');
-    setTimeout(() => document.getElementById('pin-input').classList.remove('border-rose-500'), 1500);
-  }
-}
-
-function toggleAdminPanel() {
-  if (isAdminLoggedIn) { isAdminLoggedIn = false; showToast('🔒 Panel Kilidləndi!'); updateAdminUI(); }
-  else openPinPrompt();
-}
-
 function updateAdminUI() {
-  const icon     = document.getElementById('admin-icon');
-  const btnToggle = document.getElementById('btn-admin-toggle');
-  const finSec   = document.getElementById('financial-analytics-section');
-  const finForm  = document.getElementById('modal-financial-section');
-  const docSec   = document.getElementById('modal-documents-section');
-  const btnFin   = document.getElementById('btn-final-finance');
-  if (isAdminLoggedIn) {
-    icon.className = 'fa-solid fa-lock-open text-emerald-400';
-    btnToggle.className = 'px-3.5 py-2.5 bg-emerald-950 hover:bg-emerald-900 text-emerald-400 text-sm font-bold rounded-xl transition flex items-center justify-center border border-emerald-700 shadow-md';
-    finSec.classList.remove('hidden'); finForm.classList.remove('hidden'); docSec.classList.remove('hidden');
-    if (btnFin) btnFin.classList.remove('hidden');
-  } else {
-    icon.className = 'fa-solid fa-lock text-amber-400';
-    btnToggle.className = 'px-3.5 py-2.5 bg-slate-900 hover:bg-slate-800 text-amber-400 text-sm font-bold rounded-xl transition flex items-center justify-center border border-slate-700 shadow-md';
-    finSec.classList.add('hidden'); finForm.classList.add('hidden'); docSec.classList.add('hidden');
-    if (btnFin) btnFin.classList.add('hidden');
-  }
+  const btnFin = document.getElementById('btn-final-finance');
+  if (btnFin) btnFin.classList.remove('hidden');
   renderApp();
 }
 
@@ -2003,7 +1986,6 @@ function removeDoc(i) { tempAttachedDocs.splice(i,1); renderAttachedDocsList(); 
    SINGLE CAR FINANCE MODAL
    ============================ */
 function openSingleCarFinance(id) {
-  if (!isAdminLoggedIn) { pendingCarIdToView = id; openPinPrompt(); return; }
   const c = cars.find(x=>x.id===id); if (!c) return;
   document.getElementById('single-car-title').textContent = c.model;
   document.getElementById('single-car-owner').textContent = `Müştəri: ${c.owner}`;
@@ -2040,7 +2022,6 @@ function closeSingleCarFinanceModal() { document.getElementById('singleCarFinanc
    FINAL FINANCE MODAL
    ============================ */
 function openFinalFinanceReport() {
-  if (!isAdminLoggedIn) { openPinPrompt(); return; }
   const fc = getFilteredCars();
   let carC=0,cS=0,cI=0,cP=0,rS=0,rI=0,rP=0,sf=0,ex=0;
   fc.forEach(c=>{
@@ -2125,8 +2106,9 @@ function renderKPI() {
 }
 
 function renderApp() {
+  if (!isAdminLoggedIn) return;
   populateFilters(); renderKPI();
-  if (isAdminLoggedIn) renderFinancialAnalytics();
+  renderFinancialAnalytics();
   renderCarsContainer();
   renderLogisticsAnalytics();
 }
@@ -2220,7 +2202,7 @@ function renderAdminCardPhotos(c) {
 function openAdminLightbox(startIdx, photos) {
   adminLbPhotos = photos;
   adminLbIdx    = startIdx;
-  lbPhotos = [];   // müştəri rejimini sıfırla
+  lbPhotos = [];
   document.getElementById('lightbox').classList.remove('hidden');
   document.body.style.overflow = 'hidden';
   renderAdminLightbox();
@@ -2302,7 +2284,7 @@ function renderCardGrid(cont, fc) {
               ${td!==null?`<div class="pt-2 border-t border-slate-100 flex justify-between items-center font-bold text-slate-900"><span>Ümumi Müddət:</span><span class="font-mono text-red-600">${td} Gün</span></div>`:''}
             </div>
 
-            ${isAdminLoggedIn?`<div class="bg-amber-50 border border-amber-200 p-3 rounded-2xl flex items-center justify-between"><span class="text-xs font-bold text-amber-900">Net Mənfəət:</span><span class="text-base font-black ${np>=0?'text-emerald-600':'text-rose-600'}">${np>=0?'+':''}$${np.toLocaleString()}</span></div>`:''}
+            <div class="bg-amber-50 border border-amber-200 p-3 rounded-2xl flex items-center justify-between"><span class="text-xs font-bold text-amber-900">Net Mənfəət:</span><span class="text-base font-black ${np>=0?'text-emerald-600':'text-rose-600'}">${np>=0?'+':''}$${np.toLocaleString()}</span></div>
           </div>
         </div>
 
@@ -2334,7 +2316,7 @@ function renderTableView(cont, fc) {
         <tr class="bg-slate-900 text-white uppercase text-[10px] font-black tracking-wider">
           <th class="p-4">Uduş</th><th class="p-4">Poti</th><th class="p-4">Müştəri</th><th class="p-4">Model</th>
           <th class="p-4">Etibarnamə</th><th class="p-4">Yol Pulu</th><th class="p-4">Məkan</th><th class="p-4">Konteyner</th>
-          <th class="p-4">Şəkillər</th>${isAdminLoggedIn?`<th class="p-4 text-emerald-400">Net ($)</th>`:''}
+          <th class="p-4">Şəkillər</th><th class="p-4 text-emerald-400">Net ($)</th>
           <th class="p-4">Status</th><th class="p-4 text-center">Əməliyyat</th>
         </tr>
       </thead>
@@ -2356,7 +2338,7 @@ function renderTableView(cont, fc) {
         </div>
       </td>
       <td class="p-4"><div class="flex items-center gap-1">${getPhotoStatusHtml(c)}</div></td>
-      ${isAdminLoggedIn?`<td class="p-4 font-black ${np>=0?'text-emerald-600':'text-rose-600'}">${np>=0?'+':''}$${np.toLocaleString()}</td>`:''}
+      <td class="p-4 font-black ${np>=0?'text-emerald-600':'text-rose-600'}">${np>=0?'+':''}$${np.toLocaleString()}</td>
       <td class="p-4"><span class="px-2.5 py-1 rounded-full text-[10px] font-bold bg-slate-100 text-slate-700">${c.status}</span></td>
       <td class="p-4">
         <div class="flex items-center justify-center space-x-1">
