@@ -1032,16 +1032,39 @@ async function deleteAdminMedia(mediaType, index) {
   if (!car || !car.photos || !car.photos[currentPhotoTab]) return;
   const arr = mediaType === 'video' ? car.photos[currentPhotoTab].videos : car.photos[currentPhotoTab].images;
   if (!arr || !arr[index]) return;
-  if (!confirm(`Bu ${mediaType === 'video' ? 'videonu' : 'şəkili'} silmək istəyirsiniz?\n\n(Cloudinary-dən də silinəcək)`)) return;
+  if (!confirm(`Bu ${mediaType === 'video' ? 'videonu' : 'şəkili'} silmək istəyirsiniz?`)) return;
+
   const item = arr[index];
   const publicId = typeof item === 'object' ? item.publicId : null;
   const resourceType = mediaType === 'video' ? 'video' : 'image';
+
   if (publicId) {
-    try { await fetch('/api/delete-media', { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Auth-Token': sessionToken }, body: JSON.stringify({ publicId, resourceType }) }); } catch(e) { console.warn(e); }
+    try {
+      const r = await fetch('/api/delete-media', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-Auth-Token': sessionToken },
+        body: JSON.stringify({ publicId, resourceType })
+      });
+      const respData = await r.json().catch(() => ({}));
+      if (respData.result === 'ok') {
+        showToast('✅ Cloudinary-dən silindi', 'success');
+      } else if (respData.result === 'not found') {
+        showToast('⚠️ Fayl Cloudinary-də tapılmadı', 'info');
+      } else {
+        showToast('❌ Cloudinary: ' + (respData.error?.message || JSON.stringify(respData)).substring(0, 80), 'error');
+      }
+    } catch(e) {
+      showToast('❌ API xətası: ' + e.message, 'error');
+    }
+  } else {
+    showToast('ℹ️ Köhnə şəkil — yalnız bazadan silinir', 'info');
   }
+
   arr.splice(index, 1);
-  await saveData('🗑️ Silindi');
-  renderPhotoStatusRow(car); renderPhotoTabContent(); renderApp();
+  await saveData('🗑️ Bazadan silindi');
+  renderPhotoStatusRow(car);
+  renderPhotoTabContent();
+  renderApp();
 }
 
 function openLinkModal(carId) {
