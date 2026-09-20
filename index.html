@@ -30,14 +30,6 @@ body{font-family:'Plus Jakarta Sans',sans-serif;background:#f1f5f9;color:#0f172a
 </head>
 <body class="min-h-screen pb-12 antialiased">
 
-<div id="errorBox" style="display:none;position:fixed;top:0;left:0;right:0;background:#fee;color:#900;padding:15px;font-family:monospace;font-size:12px;z-index:99999;max-height:70vh;overflow:auto;border-bottom:3px solid #900;white-space:pre-wrap"></div>
-<script>
-window.addEventListener('error', function(e) {
-  var box = document.getElementById('errorBox');
-  if (box) { box.style.display = 'block'; box.textContent += 'XƏTA: ' + (e.message || e.error) + '\nSətir: ' + e.lineno + ':' + e.colno + '\n\n'; }
-});
-</script>
-
 <div id="lockScreen" class="hidden fixed inset-0 z-[300] bg-slate-950 flex items-center justify-center p-4">
   <div class="relative bg-slate-900 border border-slate-800 text-white w-full max-w-sm rounded-3xl p-8 shadow-2xl text-center space-y-5">
     <div class="flex items-center justify-center gap-3 mb-1">
@@ -92,7 +84,6 @@ window.addEventListener('error', function(e) {
   </div>
 </div>
 
-<!-- LIGHTBOX — Customer və Admin üçün ortaq -->
 <div id="lightbox" class="hidden fixed inset-0 z-[100] bg-black flex flex-col select-none">
   <div class="flex items-center justify-between px-4 py-3 bg-black/60 shrink-0">
     <span id="lb-counter" class="text-white text-sm font-bold">1 / 1</span>
@@ -224,7 +215,7 @@ window.addEventListener('error', function(e) {
 
   <div id="filters-panel" class="bg-white border border-slate-200 p-4 rounded-2xl flex flex-col lg:flex-row gap-4 justify-between items-stretch lg:items-center">
     <div id="filters-group" class="flex flex-wrap items-center gap-3">
-      <input type="text" id="filter-search" oninput="renderApp()" placeholder="Müştəri, Model, Port..." class="bg-slate-50 border border-slate-200 text-slate-900 text-sm rounded-xl px-4 py-2.5 focus:outline-none focus:border-red-500 w-full sm:w-64">
+      <input type="text" id="filter-search" oninput="debouncedRender()" placeholder="Müştəri, Model, Port..." class="bg-slate-50 border border-slate-200 text-slate-900 text-sm rounded-xl px-4 py-2.5 focus:outline-none focus:border-red-500 w-full sm:w-64">
       <select id="filter-year" onchange="renderApp()" class="bg-slate-50 border border-slate-200 text-slate-900 text-sm font-bold rounded-xl px-3.5 py-2.5"><option value="ALL">📅 Bütün İllər</option></select>
       <select id="filter-month" onchange="renderApp()" class="bg-slate-50 border border-slate-200 text-slate-900 text-sm rounded-xl px-3.5 py-2.5">
         <option value="ALL">🗓️ Bütün Aylar</option>
@@ -575,10 +566,11 @@ window.addEventListener('error', function(e) {
     </div>
   </div>
 </div>
-
 <script>
 const CLOUD_NAME    = 'u29az1iv';
 const UPLOAD_PRESET = 'AuctionLand';
+const MAX_IMAGE_MB  = 10;
+const MAX_VIDEO_MB  = 100;
 
 let cars = [];
 let isAdminLoggedIn = false;
@@ -597,11 +589,17 @@ let lbIndex = 0;
 let lbTouchStart = 0;
 let adminLbPhotos = [], adminLbIdx = 0;
 let sessionToken = sessionStorage.getItem('cz_token') || '';
+let searchDebounceTimer = null;
 
 function generateShareToken() {
   const arr = new Uint8Array(16);
   crypto.getRandomValues(arr);
   return Array.from(arr, b => b.toString(16).padStart(2,'0')).join('');
+}
+
+function debouncedRender() {
+  clearTimeout(searchDebounceTimer);
+  searchDebounceTimer = setTimeout(() => renderApp(), 300);
 }
 
 window.addEventListener('DOMContentLoaded', async () => {
@@ -987,11 +985,11 @@ function renderPhotoTabContent() {
   const tabContent = document.getElementById('photo-tab-content');
   const catLabel = { pikap: 'Pikap', anbar: 'Anbar', poti: 'Poti' }[currentPhotoTab];
   tabContent.innerHTML = `
-    <div class="drop-zone rounded-2xl p-5 text-center space-y-3" id="dz-img"><div class="w-12 h-12 bg-indigo-100 text-indigo-600 rounded-2xl flex items-center justify-center text-xl mx-auto border border-indigo-200"><i class="fa-solid fa-cloud-arrow-up"></i></div><div><p class="text-sm font-bold text-slate-700">${catLabel} — Şəkil</p><p class="text-xs text-slate-400">Cloudinary</p></div><label class="inline-flex items-center gap-2 px-5 py-2.5 bg-indigo-600 text-white rounded-xl text-xs font-bold cursor-pointer"><i class="fa-solid fa-image"></i> Şəkil Seç<input type="file" multiple accept="image/*" class="hidden" onchange="handlePhotoFileSelect(this.files, 'image')"></label></div>
-    <div class="drop-zone rounded-2xl p-5 text-center space-y-3" id="dz-vid"><div class="w-12 h-12 bg-purple-100 text-purple-600 rounded-2xl flex items-center justify-center text-xl mx-auto border border-purple-200"><i class="fa-solid fa-video"></i></div><div><p class="text-sm font-bold text-slate-700">${catLabel} — Video</p><p class="text-xs text-slate-400">MP4, MOV, WEBM</p></div><label class="inline-flex items-center gap-2 px-5 py-2.5 bg-purple-600 text-white rounded-xl text-xs font-bold cursor-pointer"><i class="fa-solid fa-video"></i> Video Seç<input type="file" multiple accept="video/*" class="hidden" onchange="handlePhotoFileSelect(this.files, 'video')"></label></div>
+    <div class="drop-zone rounded-2xl p-5 text-center space-y-3" id="dz-img"><div class="w-12 h-12 bg-indigo-100 text-indigo-600 rounded-2xl flex items-center justify-center text-xl mx-auto border border-indigo-200"><i class="fa-solid fa-cloud-arrow-up"></i></div><div><p class="text-sm font-bold text-slate-700">${catLabel} — Şəkil</p><p class="text-xs text-slate-400">Cloudinary • Max ${MAX_IMAGE_MB} MB</p></div><label class="inline-flex items-center gap-2 px-5 py-2.5 bg-indigo-600 text-white rounded-xl text-xs font-bold cursor-pointer"><i class="fa-solid fa-image"></i> Şəkil Seç<input type="file" multiple accept="image/*" class="hidden" onchange="handlePhotoFileSelect(this.files, 'image')"></label></div>
+    <div class="drop-zone rounded-2xl p-5 text-center space-y-3" id="dz-vid"><div class="w-12 h-12 bg-purple-100 text-purple-600 rounded-2xl flex items-center justify-center text-xl mx-auto border border-purple-200"><i class="fa-solid fa-video"></i></div><div><p class="text-sm font-bold text-slate-700">${catLabel} — Video</p><p class="text-xs text-slate-400">MP4, MOV, WEBM • Max ${MAX_VIDEO_MB} MB</p></div><label class="inline-flex items-center gap-2 px-5 py-2.5 bg-purple-600 text-white rounded-xl text-xs font-bold cursor-pointer"><i class="fa-solid fa-video"></i> Video Seç<input type="file" multiple accept="video/*" class="hidden" onchange="handlePhotoFileSelect(this.files, 'video')"></label></div>
     <div id="upload-progress" class="hidden bg-indigo-50 border border-indigo-200 rounded-2xl p-4 text-xs font-bold text-indigo-800 flex items-center gap-3"><i class="fa-solid fa-spinner fa-spin text-indigo-600"></i><span id="upload-progress-text">Yüklənir...</span></div>
-    ${images.length > 0 ? `<div><h4 class="text-xs font-bold text-slate-700 mb-3">📷 Şəkillər (${images.length})</h4><div class="grid grid-cols-3 sm:grid-cols-4 gap-2">${images.map((p, i) => { const url = typeof p === 'string' ? p : p.url; return `<div class="relative group rounded-xl overflow-hidden border border-slate-200"><img src="${url}" class="photo-thumb w-full" loading="lazy"><button onclick="deleteAdminMedia('image', ${i})" class="opacity-0 group-hover:opacity-100 absolute top-1.5 right-1.5 w-7 h-7 bg-rose-600 text-white rounded-lg text-xs flex items-center justify-center"><i class="fa-solid fa-trash"></i></button></div>`; }).join('')}</div></div>` : ''}
-    ${videos.length > 0 ? `<div><h4 class="text-xs font-bold text-slate-700 mb-3">🎬 Videolar (${videos.length})</h4><div class="grid grid-cols-2 sm:grid-cols-3 gap-2">${videos.map((v, i) => { const url = typeof v === 'string' ? v : v.url; const thumb = getVideoThumb(url); return `<div class="relative group rounded-xl overflow-hidden border border-slate-200 cursor-pointer" onclick="window.open('${url}','_blank')"><img src="${thumb}" class="photo-thumb w-full" loading="lazy"><div class="absolute inset-0 bg-black/30 flex items-center justify-center"><i class="fa-solid fa-play text-white text-2xl"></i></div><button onclick="event.stopPropagation(); deleteAdminMedia('video', ${i})" class="absolute top-1.5 right-1.5 w-7 h-7 bg-rose-600 text-white rounded-lg text-xs flex items-center justify-center opacity-0 group-hover:opacity-100"><i class="fa-solid fa-trash"></i></button></div>`; }).join('')}</div></div>` : ''}`;
+    ${images.length > 0 ? `<div><h4 class="text-xs font-bold text-slate-700 mb-3">📷 Şəkillər (${images.length})</h4><div class="grid grid-cols-3 sm:grid-cols-4 gap-2">${images.map((p, i) => { const url = typeof p === 'string' ? p : p.url; return `<div class="relative group rounded-xl overflow-hidden border border-slate-200"><img src="${url}" class="photo-thumb w-full" loading="lazy"><button onclick="deleteAdminMedia('image', ${i})" class="opacity-100 absolute top-1.5 right-1.5 w-7 h-7 bg-rose-600 text-white rounded-lg text-xs flex items-center justify-center shadow-lg"><i class="fa-solid fa-trash"></i></button></div>`; }).join('')}</div></div>` : ''}
+    ${videos.length > 0 ? `<div><h4 class="text-xs font-bold text-slate-700 mb-3">🎬 Videolar (${videos.length})</h4><div class="grid grid-cols-2 sm:grid-cols-3 gap-2">${videos.map((v, i) => { const url = typeof v === 'string' ? v : v.url; const thumb = getVideoThumb(url); return `<div class="relative group rounded-xl overflow-hidden border border-slate-200 cursor-pointer" onclick="window.open('${url}','_blank')"><img src="${thumb}" class="photo-thumb w-full" loading="lazy"><div class="absolute inset-0 bg-black/30 flex items-center justify-center"><i class="fa-solid fa-play text-white text-2xl"></i></div><button onclick="event.stopPropagation(); deleteAdminMedia('video', ${i})" class="absolute top-1.5 right-1.5 w-7 h-7 bg-rose-600 text-white rounded-lg text-xs flex items-center justify-center opacity-100 shadow-lg"><i class="fa-solid fa-trash"></i></button></div>`; }).join('')}</div></div>` : ''}`;
   const dz1 = document.getElementById('dz-img');
   if (dz1) { dz1.addEventListener('dragover', e => { e.preventDefault(); dz1.classList.add('drag-over'); }); dz1.addEventListener('dragleave', () => dz1.classList.remove('drag-over')); dz1.addEventListener('drop', e => { e.preventDefault(); dz1.classList.remove('drag-over'); if (e.dataTransfer.files.length) handlePhotoFileSelect(e.dataTransfer.files, 'image'); }); }
   const dz2 = document.getElementById('dz-vid');
@@ -1010,6 +1008,12 @@ async function handlePhotoFileSelect(files, mediaType = 'image') {
   const targetArr = mediaType === 'video' ? car.photos[currentPhotoTab].videos : car.photos[currentPhotoTab].images;
   let uploaded = 0;
   for (const file of Array.from(files)) {
+    const maxSize = mediaType === 'video' ? MAX_VIDEO_MB * 1024 * 1024 : MAX_IMAGE_MB * 1024 * 1024;
+    if (file.size > maxSize) {
+      const limitMB = mediaType === 'video' ? MAX_VIDEO_MB : MAX_IMAGE_MB;
+      showToast(`❌ "${file.name}" çox böyükdür (limit: ${limitMB} MB)`, 'error');
+      continue;
+    }
     if (progressText) progressText.textContent = `Yüklənir ${uploaded + 1}/${files.length}... (${file.name})`;
     try {
       const result = await uploadToCloudinary(file, mediaType);
@@ -1035,11 +1039,9 @@ async function deleteAdminMedia(mediaType, index) {
   const arr = mediaType === 'video' ? car.photos[currentPhotoTab].videos : car.photos[currentPhotoTab].images;
   if (!arr || !arr[index]) return;
   if (!confirm(`Bu ${mediaType === 'video' ? 'videonu' : 'şəkili'} silmək istəyirsiniz?`)) return;
-
   const item = arr[index];
   const publicId = typeof item === 'object' ? item.publicId : null;
   const resourceType = mediaType === 'video' ? 'video' : 'image';
-
   if (publicId) {
     try {
       const r = await fetch('/api/delete-media', {
@@ -1048,20 +1050,13 @@ async function deleteAdminMedia(mediaType, index) {
         body: JSON.stringify({ publicId, resourceType })
       });
       const respData = await r.json().catch(() => ({}));
-      if (respData.result === 'ok') {
-        showToast('✅ Cloudinary-dən silindi', 'success');
-      } else if (respData.result === 'not found') {
-        showToast('⚠️ Fayl Cloudinary-də tapılmadı', 'info');
-      } else {
-        showToast('❌ Cloudinary: ' + (respData.error?.message || JSON.stringify(respData)).substring(0, 80), 'error');
-      }
-    } catch(e) {
-      showToast('❌ API xətası: ' + e.message, 'error');
-    }
+      if (respData.result === 'ok') showToast('✅ Cloudinary-dən silindi', 'success');
+      else if (respData.result === 'not found') showToast('⚠️ Fayl Cloudinary-də tapılmadı', 'info');
+      else showToast('❌ Cloudinary: ' + (respData.error?.message || JSON.stringify(respData)).substring(0, 80), 'error');
+    } catch(e) { showToast('❌ API xətası: ' + e.message, 'error'); }
   } else {
     showToast('ℹ️ Köhnə şəkil — yalnız bazadan silinir', 'info');
   }
-
   arr.splice(index, 1);
   await saveData('🗑️ Bazadan silindi');
   renderPhotoStatusRow(car);
@@ -1537,41 +1532,28 @@ function renderAdminCardPhotos(c) {
     const images = (cat.images || []).map(p => typeof p === 'string' ? p : p.url);
     const videos = (cat.videos || []).map(v => typeof v === 'string' ? { url: v, thumb: getVideoThumb(v) } : { url: v.url, thumb: v.thumb || getVideoThumb(v.url) });
     if (!images.length && !videos.length) return;
-
-    /* JSON-u HTML atributuna təhlükəsiz yerləşdirmək üçün escape */
     const safeJson = JSON.stringify(images).replace(/"/g, '&quot;').replace(/'/g, '&#39;');
-
     html += `<div><p class="text-[10px] font-extrabold uppercase ${ct.color} mb-1.5">${ct.label} (📷${images.length} 🎬${videos.length})</p><div class="grid grid-cols-4 gap-1.5">`;
-
     images.slice(0, 6).forEach((url, idx) => {
       html += `<div class="relative aspect-square rounded-xl overflow-hidden border border-slate-200 cursor-pointer group" data-photos="${safeJson}" data-start="${idx}" onclick="openAdminLightboxFromEl(this)"><img src="${url}" class="w-full h-full object-cover group-hover:scale-105 transition" onerror="this.parentElement.style.display='none'"><div class="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition flex items-center justify-center"><i class="fa-solid fa-expand text-white opacity-0 group-hover:opacity-100 text-sm transition"></i></div></div>`;
     });
-
     videos.slice(0, 2).forEach(v => {
       html += `<div class="relative aspect-square rounded-xl overflow-hidden border-2 border-purple-300 cursor-pointer" onclick="window.open('${v.url.replace(/'/g, "\\'")}','_blank')"><img src="${v.thumb}" class="w-full h-full object-cover"><div class="absolute inset-0 bg-black/40 flex items-center justify-center"><i class="fa-solid fa-play text-white text-lg"></i></div></div>`;
     });
-
     if ((images.length + videos.length) > 8) {
       html += `<div class="aspect-square rounded-xl bg-slate-200 flex items-center justify-center cursor-pointer" onclick="openPhotoModal(${c.id})"><span class="text-sm font-black text-slate-600">+${images.length + videos.length - 8}</span></div>`;
     }
-
     html += '</div></div>';
   });
   html += '</div>';
   return html;
 }
 
-/* Yeni köməkçi funksiya — data atributundan oxuyur */
 function openAdminLightboxFromEl(el) {
   const photosJson = el.getAttribute('data-photos') || '[]';
   const startIdx = parseInt(el.getAttribute('data-start') || '0');
   let photos = [];
-  try {
-    photos = JSON.parse(photosJson);
-  } catch(e) {
-    console.error('Photos parse xətası:', e);
-    return;
-  }
+  try { photos = JSON.parse(photosJson); } catch(e) { return; }
   if (!Array.isArray(photos) || !photos.length) return;
   openAdminLightbox(startIdx, photos);
 }
