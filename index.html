@@ -51,7 +51,7 @@ body{font-family:'Plus Jakarta Sans',sans-serif;background:#f1f5f9;color:#0f172a
 </head>
 <body class="min-h-screen pb-12 antialiased">
 
-<!-- ===================== LOCK SCREEN (Root URL giriş qapısı) ===================== -->
+<!-- ===================== LOCK SCREEN ===================== -->
 <div id="lockScreen" class="hidden fixed inset-0 z-[300] bg-slate-950 flex items-center justify-center p-4">
   <div class="absolute inset-0 opacity-30 pointer-events-none" style="background-image:radial-gradient(circle at 20% 20%, #1e293b 0%, transparent 50%),radial-gradient(circle at 80% 80%, #7f1d1d 0%, transparent 50%)"></div>
   <div class="relative bg-slate-900 border border-slate-800 text-white w-full max-w-sm rounded-3xl p-8 shadow-2xl text-center space-y-5">
@@ -84,7 +84,6 @@ body{font-family:'Plus Jakarta Sans',sans-serif;background:#f1f5f9;color:#0f172a
 <!-- ===================== CUSTOMER PANEL (?t= URL) ===================== -->
 <div id="customer-panel" class="hidden min-h-screen bg-slate-50">
 
-  <!-- Customer Header -->
   <div class="bg-white/95 backdrop-blur border-b border-slate-200 sticky top-0 z-40 shadow-sm">
     <div class="max-w-2xl mx-auto px-4 py-4">
       <div class="flex items-center gap-3 mb-3">
@@ -94,21 +93,13 @@ body{font-family:'Plus Jakarta Sans',sans-serif;background:#f1f5f9;color:#0f172a
           <p class="text-[11px] text-slate-500 font-semibold">Avtomobil Şəkil Hesabatı</p>
         </div>
       </div>
-      <div id="cust-car-header" class="bg-slate-50 border border-slate-200 p-3 rounded-2xl space-y-2">
-        <!-- Rendered by JS -->
-      </div>
+      <div id="cust-car-header" class="bg-slate-50 border border-slate-200 p-3 rounded-2xl space-y-2"></div>
     </div>
   </div>
 
-  <!-- Customer Content -->
   <div class="max-w-2xl mx-auto px-4 py-5 space-y-4">
-    <!-- Category Tabs -->
-    <div class="bg-white border border-slate-200 rounded-2xl p-1.5 flex gap-1.5 shadow-sm" id="cust-tabs">
-      <!-- Rendered by JS -->
-    </div>
-    <!-- Photo Grid -->
+    <div class="bg-white border border-slate-200 rounded-2xl p-1.5 flex gap-1.5 shadow-sm" id="cust-tabs"></div>
     <div id="cust-photo-area" class="fade-in"></div>
-    <!-- Download Bar -->
     <div id="cust-dl-bar" class="hidden flex flex-col sm:flex-row gap-3">
       <button onclick="custDownloadTabZip()" class="flex-1 py-3 bg-indigo-600 hover:bg-indigo-700 text-white rounded-2xl text-sm font-bold flex items-center justify-center gap-2 shadow-md transition">
         <i class="fa-solid fa-file-zipper"></i> Kateqoriyanı ZIP Yüklə
@@ -120,7 +111,6 @@ body{font-family:'Plus Jakarta Sans',sans-serif;background:#f1f5f9;color:#0f172a
     <p class="text-center text-xs text-slate-400 font-medium pb-4">Carzone Logistika • Müştəri Şəkil Paneli</p>
   </div>
 
-  <!-- Lightbox -->
   <div id="lightbox" class="hidden fixed inset-0 z-[100] bg-black flex flex-col select-none">
     <div class="flex items-center justify-between px-4 py-3 bg-black/60 shrink-0">
       <span id="lb-counter" class="text-white text-sm font-bold">1 / 1</span>
@@ -136,15 +126,13 @@ body{font-family:'Plus Jakarta Sans',sans-serif;background:#f1f5f9;color:#0f172a
     </div>
     <div id="lb-dots" class="flex justify-center gap-2 py-4 shrink-0"></div>
   </div>
-</div><!-- /customer-panel -->
+</div>
 
-<!-- ===================== ADMIN PANEL (initially hidden — lock screen arxasında) ===================== -->
+<!-- ===================== ADMIN PANEL ===================== -->
 <div id="admin-panel" class="hidden">
 
-<!-- Analytics Backdrop -->
 <div id="analyticsBackdrop" onclick="toggleLogisticsAnalytics(false)" class="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50 hidden opacity-0 transition-opacity duration-300"></div>
 
-<!-- Yan Analitika Paneli -->
 <div id="logistics-analytics-section" class="fixed top-0 right-0 h-full w-full max-w-xl bg-white shadow-2xl z-50 transform translate-x-full transition-transform duration-300 ease-in-out flex flex-col">
   <div class="p-5 border-b border-slate-200 flex items-center justify-between bg-slate-50">
     <div class="flex items-center space-x-3">
@@ -187,7 +175,6 @@ body{font-family:'Plus Jakarta Sans',sans-serif;background:#f1f5f9;color:#0f172a
   </div>
 </div>
 
-<!-- HEADER -->
 <header class="bg-white/95 backdrop-blur border-b border-slate-200 sticky top-0 z-40 shadow-sm">
   <div id="header-inner" class="max-w-[1750px] mx-auto px-4 sm:px-8 h-20 flex items-center justify-between">
     <div class="flex items-center space-x-3">
@@ -224,10 +211,8 @@ body{font-family:'Plus Jakarta Sans',sans-serif;background:#f1f5f9;color:#0f172a
   </div>
 </header>
 
-<!-- MAIN -->
 <main class="max-w-[1750px] mx-auto px-4 sm:px-8 mt-6 space-y-6">
 
-  <!-- Gizli Maliyyə Analitikası -->
   <div id="financial-analytics-section" class="bg-slate-900 text-white p-6 rounded-3xl border border-slate-800 shadow-2xl space-y-6">
     <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between border-b border-slate-800 pb-4 gap-4">
       <div class="flex items-center space-x-3">
@@ -248,7 +233,6 @@ body{font-family:'Plus Jakarta Sans',sans-serif;background:#f1f5f9;color:#0f172a
     </div>
   </div>
 
-  <!-- KPI Grid -->
   <div id="kpi-grid" class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 sm:gap-4">
     <div class="bg-white border border-slate-200 p-4 rounded-2xl shadow-sm"><div class="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Ümumi Avtomobil</div><div class="text-2xl sm:text-3xl font-black mt-1 text-slate-900" id="kpi-total">0</div></div>
     <div class="bg-white border border-slate-200 p-4 rounded-2xl shadow-sm"><div class="text-[11px] font-bold text-amber-600 uppercase tracking-wider">Auksion / Pikap</div><div class="text-2xl sm:text-3xl font-black mt-1 text-amber-600" id="kpi-auction">0</div></div>
@@ -258,7 +242,6 @@ body{font-family:'Plus Jakarta Sans',sans-serif;background:#f1f5f9;color:#0f172a
     <div class="bg-white border border-slate-200 p-4 rounded-2xl shadow-sm"><div class="text-[11px] font-bold text-emerald-600 uppercase tracking-wider">Bakıdadır</div><div class="text-2xl sm:text-3xl font-black mt-1 text-emerald-600" id="kpi-baku">0</div></div>
   </div>
 
-  <!-- Filters -->
   <div id="filters-panel" class="bg-white border border-slate-200 p-4 sm:p-5 rounded-2xl shadow-sm flex flex-col lg:flex-row gap-4 justify-between items-stretch lg:items-center">
     <div id="filters-group" class="flex flex-wrap items-center gap-3">
       <div class="relative w-full sm:w-64">
@@ -290,15 +273,13 @@ body{font-family:'Plus Jakarta Sans',sans-serif;background:#f1f5f9;color:#0f172a
     </div>
   </div>
 
-  <!-- Cars Container -->
   <div id="cars-container"></div>
 
 </main>
-</div><!-- /admin-panel -->
+</div>
 
 <!-- ===================== MODALS ===================== -->
 
-<!-- Photo Management Modal -->
 <div id="photoModal" class="fixed inset-0 z-[55] hidden bg-slate-950/75 backdrop-blur-sm flex items-center justify-center p-4">
   <div class="bg-white w-full max-w-2xl rounded-3xl shadow-2xl overflow-hidden max-h-[92vh] flex flex-col">
     <div class="p-5 border-b border-slate-100 bg-slate-50 flex items-center justify-between shrink-0">
@@ -311,9 +292,7 @@ body{font-family:'Plus Jakarta Sans',sans-serif;background:#f1f5f9;color:#0f172a
       </div>
       <button onclick="closePhotoModal()" class="text-slate-400 hover:text-slate-700 text-xl"><i class="fa-solid fa-xmark"></i></button>
     </div>
-
     <div id="photo-status-row" class="px-5 pt-4 shrink-0"></div>
-
     <div class="px-5 pt-3 shrink-0">
       <div class="bg-slate-100 border border-slate-200 p-1 rounded-2xl flex gap-1">
         <button id="ptab-pikap" onclick="setPhotoTab('pikap')" class="flex-1 py-2 px-2 rounded-xl text-xs font-bold transition bg-white text-indigo-700 shadow-sm">📦 Pikap</button>
@@ -321,9 +300,7 @@ body{font-family:'Plus Jakarta Sans',sans-serif;background:#f1f5f9;color:#0f172a
         <button id="ptab-poti"  onclick="setPhotoTab('poti')"  class="flex-1 py-2 px-2 rounded-xl text-xs font-bold transition text-slate-600 hover:bg-white/60">🇬🇪 Poti</button>
       </div>
     </div>
-
     <div id="photo-tab-content" class="p-5 overflow-y-auto cs flex-1 space-y-4"></div>
-
     <div class="p-4 bg-slate-50 border-t border-slate-100 flex flex-col sm:flex-row justify-between gap-2 shrink-0">
       <button onclick="openLinkModal(currentPhotoCarId)" class="px-4 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold flex items-center justify-center gap-2 transition shadow-sm">
         <i class="fa-solid fa-link"></i> Müştəri Linkini Yarat
@@ -333,7 +310,6 @@ body{font-family:'Plus Jakarta Sans',sans-serif;background:#f1f5f9;color:#0f172a
   </div>
 </div>
 
-<!-- Customer Link Modal -->
 <div id="linkModal" class="fixed inset-0 z-[60] hidden bg-slate-950/75 backdrop-blur-sm flex items-center justify-center p-4">
   <div class="bg-white w-full max-w-md rounded-3xl shadow-2xl p-6 space-y-5">
     <div class="flex items-center gap-3">
@@ -361,7 +337,6 @@ body{font-family:'Plus Jakarta Sans',sans-serif;background:#f1f5f9;color:#0f172a
   </div>
 </div>
 
-<!-- Poti Tracking Modal -->
 <div id="potiTrackingModal" class="fixed inset-0 z-50 hidden bg-slate-950/80 backdrop-blur-md flex items-center justify-center p-4">
   <div class="bg-white border border-slate-200 text-slate-900 w-full max-w-5xl rounded-3xl shadow-2xl overflow-hidden max-h-[92vh] flex flex-col">
     <div class="p-5 bg-slate-900 text-white flex items-center justify-between shrink-0">
@@ -398,7 +373,6 @@ body{font-family:'Plus Jakarta Sans',sans-serif;background:#f1f5f9;color:#0f172a
   </div>
 </div>
 
-<!-- Yekun Maliyyə Hesabatı Modalı -->
 <div id="finalFinanceReportModal" class="fixed inset-0 z-50 hidden bg-slate-950/80 backdrop-blur-md flex items-center justify-center p-4">
   <div class="bg-white border border-slate-200 text-slate-900 w-full max-w-4xl rounded-3xl shadow-2xl overflow-hidden max-h-[92vh] flex flex-col">
     <div class="p-5 bg-slate-900 text-white flex items-center justify-between no-print shrink-0">
@@ -462,7 +436,6 @@ body{font-family:'Plus Jakarta Sans',sans-serif;background:#f1f5f9;color:#0f172a
   </div>
 </div>
 
-<!-- Car Add/Edit Modal -->
 <div id="carModal" class="fixed inset-0 z-50 hidden bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4">
   <div class="bg-white border border-slate-200 w-full max-w-4xl rounded-3xl shadow-2xl overflow-hidden max-h-[92vh] flex flex-col">
     <div class="flex justify-between items-center p-6 border-b border-slate-100 bg-slate-50 shrink-0">
@@ -605,7 +578,6 @@ body{font-family:'Plus Jakarta Sans',sans-serif;background:#f1f5f9;color:#0f172a
   </div>
 </div>
 
-<!-- Tracking Companies Modal -->
 <div id="trackingCompaniesModal" class="fixed inset-0 z-[60] hidden bg-slate-950/80 backdrop-blur-md flex items-center justify-center p-4">
   <div class="bg-white border border-slate-200 w-full max-w-lg rounded-3xl shadow-2xl overflow-hidden max-h-[90vh] flex flex-col">
     <div class="flex justify-between items-center p-6 border-b border-slate-100 bg-slate-50 shrink-0">
@@ -636,7 +608,6 @@ body{font-family:'Plus Jakarta Sans',sans-serif;background:#f1f5f9;color:#0f172a
   </div>
 </div>
 
-<!-- Single Car Finance Modal -->
 <div id="singleCarFinanceModal" class="fixed inset-0 z-50 hidden bg-slate-950/80 backdrop-blur-md flex items-center justify-center p-4">
   <div class="bg-slate-900 border border-slate-800 text-white w-full max-w-lg rounded-3xl p-6 shadow-2xl space-y-5">
     <div class="flex justify-between items-center border-b border-slate-800 pb-3">
@@ -647,7 +618,6 @@ body{font-family:'Plus Jakarta Sans',sans-serif;background:#f1f5f9;color:#0f172a
   </div>
 </div>
 
-<!-- Delete Modal -->
 <div id="deleteModal" class="fixed inset-0 z-50 hidden bg-slate-950/80 backdrop-blur-md flex items-center justify-center p-4">
   <div class="bg-white border border-slate-200 text-slate-900 w-full max-w-sm rounded-3xl p-6 shadow-2xl text-center space-y-4">
     <div class="w-14 h-14 bg-rose-100 text-rose-600 rounded-2xl flex items-center justify-center text-2xl mx-auto border border-rose-200"><i class="fa-solid fa-trash-can"></i></div>
@@ -662,13 +632,9 @@ body{font-family:'Plus Jakarta Sans',sans-serif;background:#f1f5f9;color:#0f172a
 <!-- ===================== JAVASCRIPT ===================== -->
 <script>
 /* ============================
-   KONFİQURASİYA
+   KONFİQURASİYA (yalnız public açar qalıb)
    ============================ */
-const IMGBB_API_KEY  = '6c3e43b6e16dcf44b220df88a5f2d592';
-const MASTER_KEY     = '$2a$10$0CtgW0GNw2Sd00UCBDtzDOj/q0wznPfaz8FpZWFXypZyLO.y/XSay';
-const BIN_ID         = '6a934ca4da38895dfe213a58';
-const JSONBIN_BASE   = 'https://api.jsonbin.io/v3/b/';
-const SECRET_PIN     = '0990';
+const IMGBB_API_KEY = '6c3e43b6e16dcf44b220df88a5f2d592';
 
 /* ============================
    STATE
@@ -676,7 +642,6 @@ const SECRET_PIN     = '0990';
 let cars = [];
 let isAdminLoggedIn = false;
 let isCloudSyncing  = false;
-let pendingCarIdToView = null;
 let pendingDeleteCarId = null;
 let tempAttachedDocs   = [];
 let currentViewMode    = 'card';
@@ -693,6 +658,9 @@ let lbIndex      = 0;
 let lbTouchStart = 0;
 
 let adminLbPhotos = [], adminLbIdx = 0;
+
+/* Session token — serverdən gələn */
+let sessionToken = sessionStorage.getItem('cz_token') || '';
 
 /* ============================
    SHARE TOKEN UTIL
@@ -711,7 +679,7 @@ window.addEventListener('DOMContentLoaded', async () => {
   const dataParam  = params.get('data');
   const tokenParam = params.get('t');
 
-  /* === MÜŞTƏRİ REJİMİ (?data= və ya ?t=) === */
+  /* === MÜŞTƏRİ REJİMİ === */
   if (dataParam || tokenParam) {
     document.getElementById('admin-panel').classList.add('hidden');
     document.getElementById('lockScreen').classList.add('hidden');
@@ -724,13 +692,23 @@ window.addEventListener('DOMContentLoaded', async () => {
     return;
   }
 
-  /* === ADMİN REJİMİ — HƏMİŞƏ KİLİDLƏ BAŞLAYIR === */
+  /* === ADMİN REJİMİ === */
   document.getElementById('admin-panel').classList.add('hidden');
   document.getElementById('customer-panel').classList.add('hidden');
-  document.getElementById('lockScreen').classList.remove('hidden');
-  setTimeout(() => document.getElementById('lock-pin-input').focus(), 150);
 
-  /* Lock screen hadisələri */
+  /* Session token varsa → birbaşa panel */
+  if (sessionToken) {
+    isAdminLoggedIn = true;
+    document.getElementById('lockScreen').classList.add('hidden');
+    document.getElementById('admin-panel').classList.remove('hidden');
+    updateAdminUI();
+    await loadDataFromCloud();
+  } else {
+    document.getElementById('lockScreen').classList.remove('hidden');
+    setTimeout(() => document.getElementById('lock-pin-input').focus(), 150);
+  }
+
+  /* Lock input hadisələri */
   const lockInput = document.getElementById('lock-pin-input');
   lockInput.addEventListener('input', e => {
     e.target.value = e.target.value.replace(/\D/g,'').slice(0,4);
@@ -741,16 +719,11 @@ window.addEventListener('DOMContentLoaded', async () => {
   });
   document.getElementById('lock-submit-btn').addEventListener('click', verifyLockPin);
 
-  /* Cloud datasını arxa fonda yüklə (kilid açıldıqda hazır olsun) */
+  /* Tracking companies */
   loadTrackingCompanies();
   renderTrackingCompanySelect();
 
-  const saved = localStorage.getItem('carzone_db');
-  if (saved) {
-    try { cars = normalizeCars(JSON.parse(saved)); } catch(e) { cars = []; }
-  }
-  await loadDataFromCloud();
-
+  /* Doc input */
   const docInput = document.getElementById('doc-file-input');
   if (docInput) {
     docInput.addEventListener('change', e => {
@@ -767,7 +740,7 @@ window.addEventListener('DOMContentLoaded', async () => {
     });
   }
 
-  /* Lightbox keyboard */
+  /* Lightbox */
   document.addEventListener('keydown', e => {
     const lb = document.getElementById('lightbox');
     if (!lb.classList.contains('hidden')) {
@@ -776,7 +749,6 @@ window.addEventListener('DOMContentLoaded', async () => {
       else if (e.key === 'Escape') closeLightbox();
     }
   });
-
   const lbArea = document.getElementById('lb-img-area');
   if (lbArea) {
     lbArea.addEventListener('touchstart', e => { lbTouchStart = e.touches[0].clientX; }, { passive: true });
@@ -788,32 +760,53 @@ window.addEventListener('DOMContentLoaded', async () => {
 });
 
 /* ============================
-   LOCK SCREEN PIN YOXLAMA
+   LOCK SCREEN
    ============================ */
-function verifyLockPin() {
+async function verifyLockPin() {
   const input = document.getElementById('lock-pin-input');
   const pin = input.value;
+  if (!pin || pin.length !== 4) return;
 
-  if (pin === SECRET_PIN) {
-    isAdminLoggedIn = true;
-    /* Kilid ekranını gizlət, admin panelini aç */
-    document.getElementById('lockScreen').classList.add('hidden');
-    document.getElementById('admin-panel').classList.remove('hidden');
-    document.body.style.overflow = '';
-    updateAdminUI();
-    showToast('🔓 Xoş gəldiniz! Panel açıldı.', 'success');
-  } else {
+  const btn = document.getElementById('lock-submit-btn');
+  btn.disabled = true;
+  btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Yoxlanılır...';
+
+  try {
+    const r = await fetch('/api/auth', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ pin })
+    });
+    const data = await r.json();
+    if (data.ok) {
+      sessionToken = data.token;
+      sessionStorage.setItem('cz_token', sessionToken);
+      isAdminLoggedIn = true;
+      document.getElementById('lockScreen').classList.add('hidden');
+      document.getElementById('admin-panel').classList.remove('hidden');
+      document.body.style.overflow = '';
+      await loadDataFromCloud();
+      updateAdminUI();
+      showToast('🔓 Xoş gəldiniz!', 'success');
+    } else {
+      throw new Error('wrong');
+    }
+  } catch {
     document.getElementById('lock-error-msg').classList.remove('hidden');
     input.classList.add('border-rose-500');
     input.value = '';
     setTimeout(() => input.classList.remove('border-rose-500'), 1200);
     setTimeout(() => input.focus(), 100);
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = '<i class="fa-solid fa-unlock"></i> Kilidi Aç';
   }
 }
 
-/* Header-dəki kilid düyməsi — paneli bağlayır və lock screen-ə qayıdır */
 function lockAdminPanel() {
   isAdminLoggedIn = false;
+  sessionToken = '';
+  sessionStorage.removeItem('cz_token');
   document.getElementById('admin-panel').classList.add('hidden');
   document.getElementById('lockScreen').classList.remove('hidden');
   document.getElementById('lock-pin-input').value = '';
@@ -823,7 +816,7 @@ function lockAdminPanel() {
 }
 
 /* ============================
-   CUSTOMER PANEL — base64 data (?data=)
+   CUSTOMER PANEL (?data=)
    ============================ */
 function initCustomerPanel(base64) {
   try {
@@ -840,14 +833,13 @@ function initCustomerPanel(base64) {
       </div>`;
     return;
   }
-
   renderCustomerHeader();
   renderCustomerTabs();
   renderCustomerPhotos();
 }
 
 /* ============================
-   CUSTOMER PANEL — token ilə (?t=)
+   CUSTOMER PANEL (?t=)
    ============================ */
 async function initCustomerPanelByToken(token) {
   document.getElementById('cust-car-header').innerHTML = `
@@ -859,45 +851,20 @@ async function initCustomerPanelByToken(token) {
   document.getElementById('cust-photo-area').innerHTML = '';
 
   try {
-    const r = await fetch(`${JSONBIN_BASE}${BIN_ID}/latest`, {
-      headers: { 'X-Master-Key': MASTER_KEY }
-    });
-    if (!r.ok) throw new Error(`Şəbəkə xətası: ${r.status}`);
-    const result  = await r.json();
-    const allCars = Array.isArray(result.record) ? result.record : [];
-    const car     = allCars.find(c => c.shareToken === token);
+    const r = await fetch(`/api/customer?t=${encodeURIComponent(token)}`);
+    if (r.status === 404) throw new Error('Bu link etibarsızdır və ya avtomobil silinib');
+    if (!r.ok) throw new Error(`Xəta: ${r.status}`);
+    const { car } = await r.json();
 
-    if (!car) {
-      document.getElementById('customer-panel').innerHTML = `
-        <div class="min-h-screen flex items-center justify-center p-8 text-center">
-          <div>
-            <div class="text-5xl mb-4">⚠️</div>
-            <h2 class="text-xl font-bold text-slate-800 mb-2">Avtomobil Tapılmadı</h2>
-            <p class="text-sm text-slate-500">Bu link artıq etibarsızdır və ya avtomobil silinib.</p>
-          </div>
-        </div>`;
-      return;
-    }
-
-    const ph      = car.photos || { pikap: [], anbar: [], poti: [] };
-    const today   = new Date();
+    const ph = car.photos || { pikap: [], anbar: [], poti: [] };
+    const today = new Date();
     const dateStr = `${String(today.getDate()).padStart(2,'0')}.${String(today.getMonth()+1).padStart(2,'0')}.${today.getFullYear()}`;
 
     custData = {
-      n:           car.owner        || '',
-      m:           car.model        || '',
-      v:           car.vin          || '',
-      s:           car.status       || '',
-      t:           dateStr,
-      udus:        car.udus         || '',
-      anbar:       car.anbar        || '',
-      poti:        car.poti         || '',
-      baki:        car.baki         || '',
-      etibarname:  !!car.etibarname,
-      shippingPaid:!!car.shippingPaid,
-      location:    car.location     || '',
-      shippingPort:car.shippingPort || '',
-      container:   car.container    || '',
+      n: car.owner, m: car.model, v: car.vin, s: car.status, t: dateStr,
+      udus: car.udus, anbar: car.anbar, poti: car.poti, baki: car.baki,
+      etibarname: car.etibarname, shippingPaid: car.shippingPaid,
+      location: car.location, shippingPort: car.shippingPort, container: car.container,
       ph: {
         pikap: (ph.pikap || []).map(p => typeof p === 'string' ? p : p.url),
         anbar: (ph.anbar || []).map(p => typeof p === 'string' ? p : p.url),
@@ -908,14 +875,13 @@ async function initCustomerPanelByToken(token) {
     renderCustomerHeader();
     renderCustomerTabs();
     renderCustomerPhotos();
-
   } catch(e) {
     document.getElementById('customer-panel').innerHTML = `
       <div class="min-h-screen flex items-center justify-center p-8 text-center">
         <div>
-          <div class="text-5xl mb-4">❌</div>
-          <h2 class="text-xl font-bold text-slate-800 mb-2">Yüklənmə Xətası</h2>
-          <p class="text-sm text-slate-500">Məlumatlar alınarkən xəta baş verdi.<br><span class="font-mono text-xs">${e.message}</span></p>
+          <div class="text-5xl mb-4">⚠️</div>
+          <h2 class="text-xl font-bold text-slate-800 mb-2">Avtomobil Tapılmadı</h2>
+          <p class="text-sm text-slate-500">${e.message}</p>
         </div>
       </div>`;
   }
@@ -1075,10 +1041,12 @@ function closeLightbox() {
 
 function lbNext() {
   if (adminLbPhotos.length) { adminLbIdx = (adminLbIdx + 1) % adminLbPhotos.length; renderAdminLightbox(); return; }
+  if (!lbPhotos.length) return;
   lbIndex = (lbIndex + 1) % lbPhotos.length; renderLightbox();
 }
 function lbPrev() {
   if (adminLbPhotos.length) { adminLbIdx = (adminLbIdx - 1 + adminLbPhotos.length) % adminLbPhotos.length; renderAdminLightbox(); return; }
+  if (!lbPhotos.length) return;
   lbIndex = (lbIndex - 1 + lbPhotos.length) % lbPhotos.length; renderLightbox();
 }
 
@@ -1336,7 +1304,7 @@ async function deleteAdminPhoto(index) {
 }
 
 /* ============================
-   CUSTOMER LINK GENERATION (shareToken)
+   CUSTOMER LINK (shareToken)
    ============================ */
 function openLinkModal(carId) {
   const car = cars.find(c => c.id === carId);
@@ -1378,33 +1346,31 @@ function shareViaWhatsApp() {
 }
 
 /* ============================
-   JSONBIN.IO CRUD
+   SERVERLESS API ÇAĞIRIŞLARI
    ============================ */
-function jsonbinError(status) {
-  if (status === 401) return '🔒 401: Master Key yanlışdır.';
-  if (status === 403) return '🚫 403: Bu BIN-ə giriş qadağandır.';
-  if (status === 404) return '❓ 404: BIN_ID tapılmadı.';
-  return `⚠️ Xəta: ${status}`;
-}
-
 async function loadDataFromCloud() {
-  if (!BIN_ID) return false;
+  if (!sessionToken) return false;
   isCloudSyncing = true;
   try {
-    const r = await fetch(`${JSONBIN_BASE}${BIN_ID}/latest`, { headers: { 'X-Master-Key': MASTER_KEY } });
-    if (!r.ok) { showToast(jsonbinError(r.status), 'error'); return false; }
-    const result  = await r.json();
-    const remote  = result && result.record ? result.record : result;
-    if (Array.isArray(remote)) {
-      const needsMigration = remote.some(c => !c.shareToken);
-      cars = normalizeCars(remote);
-      localStorage.setItem('carzone_db', JSON.stringify(cars));
-      if (needsMigration) await saveDataToCloud(cars);
-      if (isAdminLoggedIn) renderApp();
-      return true;
+    const r = await fetch('/api/cars', {
+      headers: { 'X-Auth-Token': sessionToken }
+    });
+    if (!r.ok) {
+      if (r.status === 401) { lockAdminPanel(); return false; }
+      showToast(`⚠️ Xəta: ${r.status}`, 'error');
+      return false;
     }
-    showToast('⚠️ Cloud datası yanlış formatdadır.', 'error');
-    return false;
+    const { cars: remote } = await r.json();
+    if (!Array.isArray(remote)) {
+      showToast('⚠️ Server datası yanlış formatdadır.', 'error');
+      return false;
+    }
+    const needsMigration = remote.some(c => !c.shareToken);
+    cars = normalizeCars(remote);
+    localStorage.setItem('carzone_db', JSON.stringify(cars));
+    if (needsMigration) await saveDataToCloud(cars);
+    if (isAdminLoggedIn) renderApp();
+    return true;
   } catch(e) {
     showToast(`⚠️ Şəbəkə xətası: ${e.message}`, 'error');
     return false;
@@ -1412,18 +1378,25 @@ async function loadDataFromCloud() {
 }
 
 async function saveDataToCloud(data) {
-  if (!BIN_ID) return false;
+  if (!sessionToken) return false;
   isCloudSyncing = true;
   try {
-    const r = await fetch(`${JSONBIN_BASE}${BIN_ID}`, {
+    const r = await fetch('/api/cars', {
       method: 'PUT',
-      headers: { 'Content-Type': 'application/json', 'X-Master-Key': MASTER_KEY },
-      body: JSON.stringify(data)
+      headers: {
+        'Content-Type': 'application/json',
+        'X-Auth-Token': sessionToken
+      },
+      body: JSON.stringify({ cars: data })
     });
-    if (!r.ok) { showToast(jsonbinError(r.status), 'error'); return false; }
+    if (!r.ok) {
+      if (r.status === 401) { lockAdminPanel(); return false; }
+      showToast(`⚠️ Yazma xətası: ${r.status}`, 'error');
+      return false;
+    }
     return true;
   } catch(e) {
-    showToast(`⚠️ Cloud yazma xətası: ${e.message}`, 'error');
+    showToast(`⚠️ Şəbəkə xətası: ${e.message}`, 'error');
     return false;
   } finally { isCloudSyncing = false; }
 }
@@ -1438,7 +1411,7 @@ async function manualRefreshData() {
   const ok = await loadDataFromCloud();
   icon.classList.remove('fa-spin');
   text.innerText = orig;
-  if (ok) showToast('✅ Məlumatlar cloud-dan yeniləndi!', 'success');
+  if (ok) showToast('✅ Məlumatlar yeniləndi!', 'success');
 }
 
 async function saveData(msg = '✅ Cloud-a yazıldı!') {
@@ -1868,7 +1841,7 @@ async function toggleShippingPaidStatus(id) {
 }
 
 /* ============================
-   CAR MODAL (Add/Edit)
+   CAR MODAL
    ============================ */
 function openModal(id = null) {
   document.getElementById('carForm').reset();
@@ -1983,7 +1956,7 @@ function renderAttachedDocsList() {
 function removeDoc(i) { tempAttachedDocs.splice(i,1); renderAttachedDocsList(); }
 
 /* ============================
-   SINGLE CAR FINANCE MODAL
+   SINGLE CAR FINANCE
    ============================ */
 function openSingleCarFinance(id) {
   const c = cars.find(x=>x.id===id); if (!c) return;
@@ -2019,7 +1992,7 @@ function openSingleCarFinance(id) {
 function closeSingleCarFinanceModal() { document.getElementById('singleCarFinanceModal').classList.add('hidden'); }
 
 /* ============================
-   FINAL FINANCE MODAL
+   FINAL FINANCE
    ============================ */
 function openFinalFinanceReport() {
   const fc = getFilteredCars();
